@@ -1,0 +1,622 @@
+/*font-size: 16px(절대) == 1em(상대)
+
+/*unify class name*/
+
+/*=====================================*/
+#body{
+	margin: 0;
+	background-color: black;
+	overflow-x: hidden;
+	-webkit-user-select: none;
+
+	--pink-lady: #F2DCB1;
+	--porcelain: #E8E7E6;
+	--charcoal: #424242;
+
+	--dandelion: #FFD166;
+	--denim: #1976D2;
+	--fruit-salad: #4CAF50;
+
+	/* Page Color */
+	--moon-glow: #F4EACD;
+	--lavendar: #D6E6F5;
+	--gossip: #B5D692;
+
+	--raffia: #D9C29E;
+
+	--inner-item-width-ratio: 93.75%;
+	--inputbox-width: 20px;
+
+	font-family: sans-serif;
+}
+p{
+	margin: 0;
+	//color: background-color: var(--pink-lady);
+}
+hr{
+	height: 1px;
+	background-color: var(--pink-lady);
+}
+a{
+	text-decoration-line: none;
+	color: var(--pink-lady);
+}
+
+.Hidden-Letters{
+	display: none;	
+}
+
+#mainMenuWrap{
+	padding: 0;
+	width: 100vh;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	z-index : 1;
+}
+/*=====================================*/
+#imgBox{
+	position: absolute;
+	top: 0;
+	width: calc(100vw - 192px - var(--inputbox-width));
+	margin-left: 192px;
+	min-width: 690px;
+	display: flex;
+	justify-content: center;
+}
+.ImgPreview{
+	outline: 1px solid black;
+	width: auto;
+	height: 100vh;
+}
+.ImgScrollBox{
+	margin: 0 auto;
+	align-self: center;
+	min-width: 960px;
+	background-color: white;
+}
+.ImgScrollBox_Img{
+	display: block;
+	margin: 0 auto;
+	vertical-align: top;
+	width: 690px;
+	height: auto;
+}
+
+#epubBox{
+/*
+	width: auto;
+	height: 100vh;
+*/
+	background-color: var(--moon-glow);
+
+}
+
+/*=====================================*/
+.Side-Navigation{
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	position: fixed;
+	width: 192px;
+	height: 100vh;
+	background-color: var(--charcoal);
+	color: var(--pink-lady);
+	z-index: 2;
+	transition: 0.16s ease;
+}
+.Side-Navigation:hover{
+	width: 384px;
+	transition: 0.1s ease;	
+}
+.Side-Navigation:hover .Hidden-Letters{ display: inline-block; }
+.Side-Navigation:hover #encoding{ display: inline-block; }
+.Side-Navigation:hover .Page-Edit-Wrap{ width: var(--inner-item-width-ratio) }
+
+.Arrow{
+	position: fixed;
+	top: 50%;
+	margin-top: -72px;
+	font-size: 100px;
+	color: var(--charcoal);
+	opacity: 1;
+	font-weight: bold;
+	cursor: pointer;
+	z-index: 1;
+}
+.Arrow:hover{
+	color: var(--porcelain);
+}
+#prevArrow{
+	left: 236px; /* 192px + 44px // 216? */
+}
+#nextArrow{
+	right: calc(var(--inputbox-width) + 44px);
+}
+
+/*=====================================*/
+#header{
+	width: 360px;
+	height: 108px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+}
+#title{
+	margin: 0;
+	font-size: 3em;
+	text-align: center;
+}
+.Title-Parts{
+	font-size: 0.6em;
+}
+.Group-For-Flex-Css-1{
+	display: flex;
+}
+#status{
+	flex-grow: 1;
+	text-align: center;
+}
+#encoding{
+	display: none;
+	align-self: center;
+	-webkit-appearance: none;
+	border-radius: 2px;
+	width: 90px;
+	background: var(--porcelain);
+	color: var(--charcoal);
+	 text-align: center;
+	cursor: pointer;
+}
+#encoding option{
+	background-color: var(--pink-lady);
+	line-height: 17px;
+}
+/*=====================================*/
+#buttonBox{
+	padding: 0px 12px 0px 12px;
+	height: 108px;
+	display:flex;
+	flex-direction: column;
+}
+
+
+#buttonBoxTitle{
+	color: var(--porcelain);
+	text-align: center;
+}
+
+
+#buttonBoxWrap{
+	flex-wrap: wrap;
+	flex-grow: 1;
+	align-content: flex-start;
+}
+.ButtonBox-Btn{
+	border: 1px solid var(--porcelain);
+	border-radius: 7px;
+	padding: 1px 4px 1px 3px;
+	background-color: transparent;
+	color: var(--porcelain);
+	cursor: pointer;
+	transition: 0.1s ease;
+}
+.ButtonBox-Btn:hover{
+	border: var(--charcoal);
+	background-color: var(--porcelain);
+	color: var(--charcoal);
+	transition: 0.1s ease;
+}
+
+
+#checkBoxWrap{
+	display: inline-block;	
+}
+.CheckBox-Item{
+	display: flex;
+	justify-content: space-around;
+}
+#checkbox-vertical_double{
+	display: none;
+}
+.Checkbox-Vertical-Double-Item{
+	display: flex;
+	justify-content: space-around;
+}
+.ButtonBox-Chcb-Title{
+	color: var(--porcelain);
+	font-size: 0.8em;
+	margin-right: 10px;
+}
+.Checkbox{
+	display: inline-block;
+}
+.Checkbox .ButtonBox-Chcb{
+	appearance: none;
+	background-color: var(--pink-lady);
+	border-radius: 36px;
+	border-style: none;
+	flex-shrink: 0;
+	height: 12px;
+	width: 18px;
+	margin: 0;
+	position: relative;
+	transition: all 0.1s ease-out;
+}
+/*
+.Checkbox .ButtonBox-Chcb::before{
+	bottom: -3px;
+	content: "";
+	left: -3px;
+	right: -3px;
+	top: -3px;
+	transition: all 0.1s ease-out;
+}*/
+.Checkbox .ButtonBox-Chcb::after{
+	background-color: var(--charcoal);
+	border-radius: 50%;
+	content: "";
+	height: 8px;
+	left: 2px;
+	position: absolute;
+	top: 2px;
+	width: 7px;
+}
+.Checkbox .ButtonBox-Chcb:hover{
+	background-color: var(--charcoal);
+	transition-duration: 0s;
+}
+.Checkbox .ButtonBox-Chcb:hover::after{
+	background-color: var(--pink-lady);
+	border-radius: 50%;
+	content: "";
+	height: 8px;
+	left: 2px;
+	position: absolute;
+	top: 2px;
+	width: 7px;
+}
+
+
+.Checkbox .ButtonBox-Chcb:checked{
+	background-color: black;
+}
+.Checkbox .ButtonBox-Chcb:checked::after{
+	background-color: var(--porcelain);
+	left: 8px;
+}
+.Checkbox .ButtonBox-Chcb:checked:hover{
+	background-color: var(--porcelain);
+}
+.Checkbox .ButtonBox-Chcb:checked:hover::after{
+	background-color: black;
+}
+
+
+.ButtonBox-Chcb{}
+
+
+
+#checkboxScroll{}
+
+
+/*=====================================*/
+#zipInfoBox{
+	border-radius: 3px;
+	width: var(--inner-item-width-ratio);
+	height: 194px;
+	background-color: var(--porcelain);
+	overflow-y: scroll;
+}
+#zipInfoBox::-webkit-scrollbar{
+	width: 14px;
+}
+#zipInfoBox::-webkit-scrollbar-thumb{
+	background: var(--charcoal);
+	border-radius: 7px;
+	background-clip: padding-box;
+	border: 2px dashed transparent;
+}
+.ZipInfoWrap{
+	display: flex;
+	flex-direction: column;
+	margin: 3px;
+	color: var(--charcoal);
+	border: 1.1px solid var(--charcoal);
+	border-radius: 3px;
+	font-size: 0.6em;
+}
+.FileList{
+	display: flex;
+	margin: 0px;
+	height: 18px;
+	cursor: pointer;
+}
+.FileListType{
+	display: inline-block;
+	width: 26px;
+	text-align: center;
+	flex-shrink: 0;
+	font-weight: 900;
+}
+.FileListDivider{
+	margin-right: 4px;
+}
+.FileListTitle{
+	flex-grow: 1;
+	justify-content: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.FileListPageWrap{
+	display: none;
+	float: right;
+}
+
+
+
+@-moz-document url-prefix(){
+	#zipInfoBox{
+		scrollbar-color: var(--charcoal) var(--porcelain); /* (Thumb, Scroll) */
+		scrollbar-width: thin;
+	}
+	#pageBox{
+		scrollbar-color: var(--raffia) var(--pink-lady); /* (Thumb, Scroll) */
+		scrollbar-width: thin;
+	}
+}
+/*=====================================*/
+.ImgInfoBox{	
+	display: flex;
+	flex-direction: column;
+	width: var(--inner-item-width-ratio);
+	height: 454px;
+	background-color: var(--pink-lady);
+}
+#pageBox{
+	margin: 5px 2px 5px 2px;
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+	color: var(--charcoal);
+	font-size: 0.6em;
+	text-align: center;
+	overflow-y: scroll;
+}
+#pageBox::-webkit-scrollbar{
+	width: 14px;
+}
+#pageBox::-webkit-scrollbar-thumb{
+	background: var(--raffia);
+	border-radius: 7px;
+	background-clip: padding-box;
+	border: 2px solid transparent;
+}
+#pageBox::-moz-scrollbar-thumb{
+	/*  for firefox scroll  */
+	/*scrollbar-color: var(--raffia) var(--pink-lady); /* (Thumb, Scroll) */
+	scrollbar-width: thin;
+
+	background: var(--raffia);
+	border-radius: 7px;
+	background-clip: padding-box;
+	border: 2px solid transparent;
+}
+.Page{
+	cursor: pointer;
+}
+.Page:hover{
+	background-color: var(--porcelain);
+}
+.imgPage{}
+.epubPage{
+	font-size: 2em;
+	text-align: left;
+	width: 26px;
+}
+.PageElement{}
+.InfoBox{
+	padding: 0 2px 1px 3px;
+}
+#count{
+	color: var(--charcoal);
+}
+#openModal{
+    float: right;
+    width: 20px;
+    border-radius: 50%;
+	background-color: var(--charcoal);
+	text-align: center;
+	color: var(--pink_lady);
+	font-weight: 600;
+	cursor: pointer;
+}
+#modal{
+	display: none;
+	position: fixed;
+	width: 540px;
+    height: 580px;
+    margin-top: 5px;
+    background: var(--charcoal);
+}
+#modalPage{
+	margin-left: 20px;
+}
+#madeBy{
+	margin-top: 83px;
+	margin-left: 300px;
+}
+#runeShell{
+	color: var(--porcelain);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+/*=====================================*/
+#footer{
+	margin: 5px 0 0 0;
+	display: flex;
+	width: var(--inner-item-width-ratio);
+	height: 108px;
+}
+.Page-Edit-Wrap{
+	width: 180px;
+}
+#btnOptionWrap{
+	display: flex;
+	justify-content: space-around;
+}
+.Page-Edit-Btn{
+	width: 80px;
+	height: 80px;
+	border: 1px solid var(--pink-lady);
+	border-radius: 2px;
+	background-color: transparent;
+	color: var(--pink-lady);
+	cursor: pointer;
+	transition: 0.1s ease;
+}
+.Page-Edit-Btn:hover{
+	border: var(--charcoal);
+	background-color: var(--pink-lady);
+	color: var(--charcoal);
+	transition: 0.1s ease;
+}
+
+
+#epubOptionWrap{
+	display: none;
+	width: 100%;
+}
+.Epub-Option-Item{
+	display: flex;
+	justify-content: space-around;
+	margin: 7px 0;
+	width: 100%;	
+}
+#epubOptionItem_fontSize{}
+.Epub-Option-Item-Title{}
+.Epub-Option-Item-Range{
+	appearance: none;
+	margin-top: 6px;
+	border-radius: 3px;
+	width: 150px;
+	height: 12px;
+	background-color: var(--porcelain);
+	transition: 0.2s;
+}
+.Epub-Option-Item-Range::-webkit-slider-thumb{
+	-webkit-appearance: none;
+	border-radius: 6px;
+	width: 12px;
+	height: 12px;
+	background-color: var(--charcoal);
+	cursor: pointer;
+}
+/*
+#epubOptionItem_fontSize_range{}
+.Epub-Option-Item-Text{}
+#epubOptionItem_fontSize_text{}
+*/
+#colorLabel{
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.Epub-Option-Item-BackgroundColorBox{
+	margin: 0 4px;
+	width: 22px;
+	height:13px;
+}
+#color{
+	border: none;
+	width: 27px;
+	height: 20px;
+	background-color: transparent;
+}
+#color::-webkit-color-swatch{
+	//border: none;
+}
+#epubOptionItem_backgroundColor_white{ background-color: white;}
+#epubOptionItem_backgroundColor_black{ background-color: black;}
+#epubOptionItem_backgroundColor_moonGlow{ background-color: var(--moon-glow); border: 1px solid var(--porcerlain);}
+#epubOptionItem_backgroundColor_lavendar{ background-color: var(--lavendar);}
+#epubOptionItem_backgroundColor_gossip{ background-color: var(--gossip); }
+#epubOptionItem_backgroundColor_custom{ background-color: white; }
+#customColorText{
+	color: black;
+	font-size: 0.2em;
+	text-align: center;
+	line-height: 6px;
+}
+
+#epubOptionItem_progress{
+	margin-top: 5px;
+	appearance: none;
+}
+#epubOptionItem_progress::-webkit-progress-bar{	
+	border-radius: 6px;
+	height: 12px;
+	width: 160px;
+	background: var(--pink-lady);
+	overflow: hidden;
+}
+#epubOptionItem_progress::-webkit-progress-value{
+	height: 12px;
+	background-color: black;
+}
+
+#previous-image{}
+#next-image{}
+#footerInfoWrap{
+	margin: 4px;
+}
+.Footer-Info{
+	color: black;
+	font-size: 0.8m
+}
+
+/*=====================================*/
+/*=====================================*/
+.InputBox{
+	position: fixed;
+	top: 0;
+	right: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--inputbox-width);
+	height: 100vh;
+	background-color: var(--porcelain);
+	color: var(--charcoal);
+	font-size: 3em;
+	cursor: pointer;
+	z-index: 2;
+	transition: 0.2s ease;
+}
+#inputBoxInner{
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 80%;
+	height: 92%;
+	border: 8px dashed var(--charcoal);
+}
+.Select-File-Text{
+	text-align: center;
+}
+
+
+/*=====================================*/
+/*=====================================*/
+.epub-container{
+	overflow-x: hidden !important;
+}
+.epub-container::-webkit-scrollbar{
+	width: 20px !important;
+}
+.epub-container::-webkit-scrollbar-thumb{
+	background: var(--raffia) !important;
+	border-radius: 10px !important;
+}

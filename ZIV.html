@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Zip Image Viewer</title>
+	<link rel="icon" href="resource/logo.png"/>
+	
+	<link rel="stylesheet" href="lib/main.css">
+	<script type="text/javascript" src="lib/jquery-3.6.3.js"></script>
+	<script type="text/javascript" src="lib/main_event.js"></script>
+	<script type="text/javascript" src="lib/input_file.js"></script>
+	<!--<script type="text/javascript" src="lib/epub.js"></script>-->
+
+</head>
+<body id="body">
+
+
+<div id="nextArrow" href="#next" class="Arrow">›</div>
+<div id="prevArrow" href="#prev" class="Arrow">‹</div>
+<div class="Img-Box" id="imgBox">
+	<img class="ImgPreview" id="imgPreview" src="resource/img-preview.png">
+	<img class="ImgPreview" id="imgPreview_double" src="resource/img-preview.png">
+	<div class="ImgScrollBox" id="imgScrollBox"></div>
+	
+	<div id="epubBox"></div>
+</div>
+
+
+
+<aside class="Side-Navigation" id="sideNavigation">
+<!--마우스호버이벤트-->
+	<div id="header">
+		<a href="ZIV.html"><p id="title">
+			<strong>Z</strong><span class="Title-Parts Hidden-Letters">ip</span><strong> I</strong><span class="Title-Parts Hidden-Letters">mage</span><strong> V</strong><span class="Title-Parts Hidden-Letters">iewer</span>
+		</p></a>
+		<div class="Group-For-Flex-Css-1">
+			<p id="status">no selected file</p>
+			<select id="encoding">	
+				<option>euc-kr</option> <!-- EUC-KR == CP949 -->
+				<option>utf-8</option>
+				<option>iso-8859-2</option>
+				<option>euc-jp</option>
+				<option>shift-jis</option>
+			<!--
+				<option>cp437</option>
+				<option>ibm866</option>
+				<option>iso-8859-3</option>
+				<option>iso-8859-4</option>
+				<option>iso-8859-5</option>
+				<option>iso-8859-6</option>
+				<option>iso-8859-7</option>
+				<option>iso-8859-8</option>
+				<option>iso-8859-10</option>
+				<option>iso-8859-13</option>
+				<option>iso-8859-14</option>
+				<option>iso-8859-15</option>
+				<option>iso-8859-16</option>
+				<option>koi8-r</option>
+				<option>koi8-u</option>
+				<option>macintosh</option>
+				<option>windows-874</option>
+				<option>windows-1250</option>
+				<option>windows-1251</option>
+				<option>windows-1252</option>
+				<option>windows-1253</option>
+				<option>windows-1254</option>
+				<option>windows-1255</option>
+				<option>windows-1256</option>
+				<option>windows-1257</option>
+				<option>windows-1258</option>
+				<option>x-mac-cyrillic</option>
+				<option>gbk</option>
+				<option>gb18030</option>
+				<option>big5</option>
+				<option>iso-2022-jp</option>
+				<option>utf-16be</option>
+				<option>utf-16le</option>
+				<option>x-user-defined</option>
+			-->
+			</select>	
+		</div>
+	</div>
+
+
+	
+	<div id="buttonBox">
+		<p id=buttonBoxTitle>---Modes---</p>
+		<div id="buttonBoxWrap">
+			<button class="ButtonBox-Btn" id="vertical">Vertical(V)</button>
+			<button class="ButtonBox-Btn" id="vertical_double">Double(D)</button>
+			<button class="ButtonBox-Btn" id="horizontal">Horizontal(H)</button>
+			<button class="ButtonBox-Btn" id="scroll">Scroll(S)</button>
+			<br>
+			<button class="ButtonBox-Btn" id="fullscreen">Fullscreen(F)</button> <!-- icon: ⛶ &#x26F6 -->
+		</div>
+		<div id="checkBoxWrap">
+			<div class="CheckBox-Item" id="checkbox-vertical_double">
+				<div class="Checkbox-Vertical-Double-Item">
+					<span class="ButtonBox-Chcb-Title Hidden-Letters">add-fitting-page(A)</span>
+					<div class="Checkbox">
+						<input type="checkbox" class="ButtonBox-Chcb" id="add-fitting-page">
+					</div>
+				</div>
+				<div class="Checkbox-Vertical-Double-Item">
+					<span class="ButtonBox-Chcb-Title Hidden-Letters">reverse-view(R)</span>
+					<div class="Checkbox">
+						<input type="checkbox" class="ButtonBox-Chcb" id="reverse-view">
+					</div>
+				</div>
+			</div>
+			<div class="CheckBox-Item" id="checkboxScroll">
+				<!--update-->
+			</div>
+		</div>
+	</div>
+
+
+
+	<div id="zipInfoBox">
+		<div class="Modal Hidden-Letters" id="modal">
+			<div id="modalPage">
+				<h4></h4>
+				<p>version. 0.2.1</p>
+
+				<h4>How To Use</h4>
+				<p>1. Move cursor to right side of the page</p>
+				<p>2. Select your File/Files</p>
+				<p>3. Move cursor to left side of the page</p>
+				<p>4. Select your book, page, mode and so on</p>
+
+				<h4>Shortcut Key</h4>
+				<p>View Mode Change : V, D, H, S</p>
+				<p>Fullscreen Toggle : F</p>
+				<p>Page : ←, →</p>
+
+				<h4>Support Book Type</h4>
+				<p>- ZIPped items below : zip</p>
+				<p>- IMG : jpg, jpeg, png, gif</p>
+				<p>- EPUB : epub</p>
+
+				<h4></h4>
+				<p id="madeBy">made by <a id="runeShell" href="https://github.com/RuneShell">RuneShell</a></p>
+			</div>
+		</div>
+		<!-- handled by input_file.js -->
+	</div>
+
+
+
+	<div class="ImgInfoBox">
+		<div id="pageBox">
+			<!-- Handled by main_event.js -->
+		</div>
+		<div class="InfoBox">
+			<span id="count"> page count : <strong><span id="countNum">0</span></strong></span>
+			<span class="Hidden-Letters" id="openModal">?</span>
+		</div>
+	</div>
+
+
+	
+	<div id="footer">
+		<!--
+		<div class="Page-Edit-Wrap" id="btnOptionWrap">
+			<button class="Page-Edit-Btn" id="previous-image">Previous<br/>(←)</button>
+			<button class="Page-Edit-Btn" id="next-image">Next<br/>(→)</button>
+		</div>
+		-->
+		<div class="Page-Edit-Wrap" id="epubOptionWrap">
+			<div class="Epub-Option-Item id="epubOptionItem_fontSize">
+				<span class="Epub-Option-Item-Title">Font Size </span><span class="Epub-Option-Item-Text" id="epubOptionItem_fontSize_text">16px</span>
+				<input type="range" class="Hidden-Letters Epub-Option-Item-Range" id="epubOptionItem_fontSize_range" min="9" max="26" value="15"><!--Epub.js default font size: 15-->
+			</div>
+			<div class="Epub-Option-Item id="epubOptionItem_backgroundColor">
+				<span class="Epub-Option-Item-Title">Background Color</span>
+				<label for="color" id="colorLabel">
+					<div class="Epub-Option-Item-BackgroundColorBox Hidden-Letters" id="epubOptionItem_backgroundColor_white"></div>
+					<div class="Epub-Option-Item-BackgroundColorBox Hidden-Letters" id="epubOptionItem_backgroundColor_black"></div>
+					<div class="Epub-Option-Item-BackgroundColorBox" id="epubOptionItem_backgroundColor_moonGlow"></div>
+					<div class="Epub-Option-Item-BackgroundColorBox Hidden-Letters" id="epubOptionItem_backgroundColor_lavendar"></div>
+					<div class="Epub-Option-Item-BackgroundColorBox Hidden-Letters" id="epubOptionItem_backgroundColor_gossip"></div>
+					<!--
+					<div class="Epub-Option-Item-BackgroundColorBox" id="epubOptionItem_backgroundColor_custom"><span id="customColorText">c</span></div>
+					-->
+				</label>
+				<!--<input type="color" name="color" class="Hidden-Letters" id="color" value="#000000">-->
+			</div>
+			<div class="Epub-Option-Item id="epubOptionItem_progress">
+				<span class="Hidden-Letters Epub-Option-Item-Title">Progress </span><span class="Hidden-Letters Epub-Option-Item-Text" id="epubOptionItem_progress_text">0%</span>
+				<progress class="Epub-Option-Item-Progress" id="epubOptionItem_progress" max="100" value="0"></progress>
+			</div>
+		</div>
+
+	</div>
+</aside>
+
+
+
+<input id="selectFile" type="file" multiple hidden/>
+<div class="InputBox" id="selectFileButton" onmouseover="ActivateInputBox()" onmouseout="DisableInputBox()">
+	<div id="inputBoxInner"><strong><p class="Select-File-Text">Select</p><br><p class="Select-File-Text">Drag&Drop</p><br><p class="Select-File-Text">File</p></strong></div>
+</div>
+
+
+
+	<script type="text/javascript" src="lib/zip.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/epub.min.js"></script>
+</body>
+</html>
