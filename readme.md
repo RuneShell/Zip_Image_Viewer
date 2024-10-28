@@ -6,7 +6,7 @@ If your book is zipped, it will recursively unzip and extract the inner files.
 I made this because the Windows built-in image viewer is not good for reading books(img).
 
 
-![image1]()
+![image1](https://github.com/user-attachments/assets/8244392f-4575-44d6-a8cb-8bb2ccf9f9e0)
 
 
 ### How to use:
