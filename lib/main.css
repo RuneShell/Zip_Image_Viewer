@@ -175,7 +175,7 @@ a{
 /*=====================================*/
 #buttonBox{
 	padding: 0px 12px 0px 12px;
-	height: 108px;
+	height: 125px;
 	display:flex;
 	flex-direction: column;
 }
