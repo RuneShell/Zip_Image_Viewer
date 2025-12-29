@@ -195,6 +195,7 @@ a{
 	flex-wrap: wrap;
 	flex-grow: 1;
 	align-content: flex-start;
+	margin-bottom: 4px;
 }
 .ButtonBox-Btn{
 	border: 1px solid var(--porcelain);

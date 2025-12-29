@@ -10,10 +10,11 @@ I made this because the Windows built-in image viewer is not good for reading bo
 
 
 ### How to use:
+- HTML Preview  : [ZIV.html](https://raw.githack.com/RuneShell/Zip_Image_Viewer/main/ZIV.html) *(sometimes unstable)*
 
-1.  Open **ZIV.html** in your local browser.
-2.  Hover your mouse cursor over the right side of the page and Upload your files.
-3.  Hover your mouse cursor over the left side of the page and Select your book.
+- Local Usage : Open **ZIV.html** in your local browser.
+>	1.  Hover your mouse cursor over the right side of the page and Upload your files.
+>	2.  Hover your mouse cursor over the left side of the page and Select your book.
 
 ## Support
 **File Types**
