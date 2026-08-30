@@ -1,3 +1,10 @@
+# Folders
+/node_modules/
+
+# Files
 *.txt
-structure.png
-structure.drawio
+*.drawio
+
+test.ts
+
+TODO.md

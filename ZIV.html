@@ -1,34 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="UTF-8">
+    <meta charset="UTF-8">
 	<title>Zip Image Viewer</title>
 	<link rel="icon" href="resource/logo.png"/>
-	
-	<link rel="stylesheet" href="lib/main.css">
-	<script type="text/javascript" src="lib/jquery-3.6.3.js"></script>
-	<script type="text/javascript" src="lib/main_event.js"></script>
-	<script type="text/javascript" src="lib/input_file.js"></script>
-	<!--<script type="text/javascript" src="lib/epub.js"></script>-->
 
+    <!-- css, js -->
 </head>
-<body id="body">
+
+<body>
+<!---------------------------------->
+<!-- body                         -->
+<!---------------------------------->
+
+<!-- Main Element                 -->
+<div id="react-root"></div>
 
 
-<div id="nextArrow" href="#next" class="Arrow">›</div>
-<div id="prevArrow" href="#prev" class="Arrow">‹</div>
-<div class="Img-Box" id="imgBox">
-	<img class="ImgPreview" id="imgPreview" src="resource/img-preview.png">
-	<img class="ImgPreview" id="imgPreview_double" src="resource/img-preview.png">
-	<div class="ImgScrollBox" id="imgScrollBox"></div>
-	
-	<div id="epubBox"></div>
-</div>
-
-
-
+<!-- Left Side                    -->
 <aside class="Side-Navigation" id="sideNavigation">
-<!--마우스호버이벤트-->
 	<div id="header">
 		<a href="ZIV.html"><p id="title">
 			<strong>Z</strong><span class="Title-Parts Hidden-Letters">ip</span><strong> I</strong><span class="Title-Parts Hidden-Letters">mage</span><strong> V</strong><span class="Title-Parts Hidden-Letters">iewer</span>
@@ -41,42 +31,7 @@
 				<option>iso-8859-2</option>
 				<option>euc-jp</option>
 				<option>shift-jis</option>
-			<!--
-				<option>cp437</option>
-				<option>ibm866</option>
-				<option>iso-8859-3</option>
-				<option>iso-8859-4</option>
-				<option>iso-8859-5</option>
-				<option>iso-8859-6</option>
-				<option>iso-8859-7</option>
-				<option>iso-8859-8</option>
-				<option>iso-8859-10</option>
-				<option>iso-8859-13</option>
-				<option>iso-8859-14</option>
-				<option>iso-8859-15</option>
-				<option>iso-8859-16</option>
-				<option>koi8-r</option>
-				<option>koi8-u</option>
-				<option>macintosh</option>
-				<option>windows-874</option>
-				<option>windows-1250</option>
-				<option>windows-1251</option>
-				<option>windows-1252</option>
-				<option>windows-1253</option>
-				<option>windows-1254</option>
-				<option>windows-1255</option>
-				<option>windows-1256</option>
-				<option>windows-1257</option>
-				<option>windows-1258</option>
-				<option>x-mac-cyrillic</option>
-				<option>gbk</option>
-				<option>gb18030</option>
-				<option>big5</option>
-				<option>iso-2022-jp</option>
-				<option>utf-16be</option>
-				<option>utf-16le</option>
-				<option>x-user-defined</option>
-			-->
+
 			</select>	
 		</div>
 	</div>
@@ -120,7 +75,7 @@
 		<div class="Modal Hidden-Letters" id="modal">
 			<div id="modalPage">
 				<h4></h4>
-				<p>version. 0.2.1</p>
+				<p>version. 1.3.0</p>
 
 				<h4>How To Use</h4>
 				<p>1. Move cursor to right side of the page</p>
@@ -196,16 +151,12 @@
 </aside>
 
 
-
+<!-- Right Side                   -->
 <input id="selectFile" type="file" multiple hidden/>
 <div class="InputBox" id="selectFileButton" onmouseover="ActivateInputBox()" onmouseout="DisableInputBox()">
 	<div id="inputBoxInner"><strong><p class="Select-File-Text">Select</p><br><p class="Select-File-Text">Drag&Drop</p><br><p class="Select-File-Text">File</p></strong></div>
 </div>
 
 
-
-	<script type="text/javascript" src="lib/zip.min.js"></script>
-	<script type="text/javascript" src="lib/jszip.min.js"></script>
-	<script type="text/javascript" src="lib/epub.min.js"></script>
 </body>
 </html>
