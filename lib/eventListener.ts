@@ -4,6 +4,7 @@ import {application, leftSidebar, rightSidebar,
         Application, LeftSidebar, RightSidebar
  } from "./HTMLVanilla.js";
 import { viewer, Viewer } from "./viewer.jsx";
+import { fileInputManager } from "./fileManager.js";
 
 
 // Complement the **Key Binding?** as `Command Pattern`.
@@ -12,11 +13,11 @@ import { viewer, Viewer } from "./viewer.jsx";
 Arrows
 Space
 
-KeyF
 KeyV
 KeyD
 KeyH
 KeyS
+KeyF
 
 KeyA
 KeyR
@@ -52,7 +53,45 @@ wheel
 interface Command<TPayLoad = void> {
     execute(payload?: TPayLoad): void;
 }
+type AnyCommand = Command<any>; // Registry에 넣을 때 payload type이 달라서 any로 통일함.
 
+
+
+// Viewer Commands
+// freeze?
+class PrevPageCommand implements Command {
+    constructor(private viewer: Viewer){}
+    execute(){
+        this.viewer.prevPage();
+    }  
+}
+class NextPageCommand implements Command {
+    constructor(private viewer: Viewer){}
+    execute(){
+        this.viewer.nextPage();
+    }  
+}
+class SetDisplayModeCommand implements Command<"single" | "horizontal" | "double" | "scroll"> {
+    constructor(private viewer: Viewer){}
+    execute(mode: "single" | "horizontal" | "double" | "scroll"){
+        switch(mode){
+            case "single":
+                // this.viewer.changeState();
+        }
+    }
+}
+class AddFittingPageCommand implements Command {
+    constructor(private viewer: Viewer){}
+    execute(){
+        // this.viewer.addFittingPage();
+    }  
+}
+class ToggleReverseViewCommand implements Command {
+    constructor(private viewer: Viewer){}
+    execute(){
+        // this.viewer.reverseView();
+    }
+}
 class SetFullscreenCommand implements Command {
     constructor(private application: Application){}
     execute(){
@@ -60,61 +99,106 @@ class SetFullscreenCommand implements Command {
     }
 };
 
+function Command2Lambda(command: AnyCommand, payload?: unknown){
+    return () => command.execute(payload as never);
+}
 
 
-const commands: Record<string, Command> = {
+// Command Registry
+const commands: Record<string, AnyCommand> = {
+    prevPage: new PrevPageCommand(viewer),
+    nextPage: new NextPageCommand(viewer),
+
+    setDisplayMode: new SetDisplayModeCommand(viewer),
+
+    addFittingPage: new AddFittingPageCommand(viewer),
+    toggleReverseView: new ToggleReverseViewCommand(viewer),
     setFullscreen: new SetFullscreenCommand(application),
 }
-
+// ---------------------------------
 // 1. Bind Keydown Events to Commands
+// ---------------------------------
+// Key Binding
 const keyToAction: Record<string, () => void> = {
+    arrowleft:  () => commands.prevPage.execute(),
+    arrowright: () => commands.nextPage.execute(),
+    space:      () => commands.nextPage.execute(),
+
+    KeyV: () => commands.setDisplayMode.execute("single"),
+    KeyH: () => commands.setDisplayMode.execute("horizontal"),
+    KeyD: () => commands.setDisplayMode.execute("double"),
+    KeyS: () => commands.setDisplayMode.execute("scroll"),
+
+    KeyA: () => commands.addFittingPage.execute(),
+    KeyR: () => commands.toggleReverseView.execute(),
     KeyF: () => commands.setFullscreen.execute(),
 }
-document.addEventListener("keydown", (e) => {console.log(`Key pressed: ${e.code}`); keyToAction[e.code]?.();}); // log for debugging
+document.addEventListener("keydown", (e) => {keyToAction[e.code]?.();});
 
-// 2. Bind Click Events to Commands // 이런 구현보다 직접 HTML에 박아두는 게 안전하다고 함.
 
-// 3. Bind Wheel Events to Commands // 이렇게 구현할 필요가 있나?
 
-// 4. Bind Drag Events to Commands
+// ---------------------------------
+// 2. Bind Click Events to Commands
+// ---------------------------------
+const StaticElementById = {
+    prevArrow: document.getElementById("prevArrow") as HTMLElement,
+    nextArrow: document.getElementById("nextArrow") as HTMLElement,
+}
 
-// 5. Bind Input Events to Commands
+interface StaticBinding{
+    element: HTMLElement;
+    event: string;
+    command: AnyCommand;
+    payload? : undefined;
+}
+const staticElementBindings: StaticBinding[] = [
+    {element: StaticElementById.prevArrow, event: "click", command: commands.prevPage},
+    {element: StaticElementById.nextArrow, event: "click", command: commands.nextPage},
+]
+for (const b of staticElementBindings){
+    b.element.addEventListener(b.event, (e) => {
+        b.command.execute(b.payload);
+    });
+}
 
-// 6. Bind Change Events to Commands
+// ---------------------------------
+// 3. Bind Wheel Events to Commands
+// --------------------------------
 
-// =============================
-// File Handlers
-// const fileInputRef = useRef<HTMLInputElement>(null);
-// const handleSelectFileClick = () => {
-//     fileInputRef.current?.click();
-// };
 
-// // click
-// const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     rightSidebar.freeze();
+
+// ---------------------------------
+// 4. Bind Drag/Drop Events to Commands
+// ---------------------------------
+
+// File Drag&Drop
+application.HTMLElementById.inputBox.addEventListener("dragover", (e) => {
+    e.stopPropagation(); 
+
+    rightSidebar.freeze();}
+);
+application.HTMLElementById.inputBox.addEventListener("drop", async (e) => {
+    e.stopPropagation();
+    if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) return rightSidebar.unfreeze();
+    const inputFileList = Array.from(e.dataTransfer.files);
+    await fileInputManager.acceptFiles(inputFileList); // 비동기
+
+    rightSidebar.unfreeze();
+});
+
+
+// ---------------------------------
+// 5. Bind Change Events to Commands
+// ---------------------------------
+
+// File Input Change
+application.HTMLElementById.selectFile.addEventListener("change", async (e) => {
+    rightSidebar.freeze();
     
-//     const files = e.target.files;
-//     if (!files || files.length === 0) return;
-//     const inputFileList = Array.from(files);
-//     await fileInputManager.acceptFiles(inputFileList); // 비동기
+    const files = (e.target as HTMLInputElement).files;
+    if (!files || files.length === 0) return rightSidebar.unfreeze();
+    const inputFileList = Array.from(files);
+    await fileInputManager.acceptFiles(inputFileList); // 비동기
 
-//     rightSidebar.unfreeze();
-// };
-// // drag and drop
-// const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
-//     e.stopPropagation(); // stop event propagation to parent elements
-
-//     rightSidebar.freeze();
-// };
-
-// const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
-//     e.stopPropagation();
-
-//     if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
-//     const inputFileList = Array.from(e.dataTransfer.files);
-//     await fileInputManager.acceptFiles(inputFileList); // 비동기
-
-//     rightSidebar.unfreeze();
-// };
-
-
+    rightSidebar.unfreeze();
+});

@@ -1,4 +1,13 @@
+import {createRoot} from "react-dom/client";
 
+// import {useFileInput} from "./eventListener.js";
+// const {
+//     fileInputRef,
+//     handleSelectFileClick,
+//     handleFileChange,
+//     handleDragOver,
+//     handleDrop
+// } = useFileInput(); // 제거?
 
 
 // Complement the **page state** as `State Pattern`.
@@ -9,8 +18,11 @@ export class Viewer{
     // Singleton Pattern
     private static instance: Viewer;
     private constructor() { // prevents new() from being called on this class
+        this.target = document.getElementById("react-viewer") as HTMLElement;
+        console.log("Viewer target:", this.target);
+        this.root = createRoot(this.target);
 
-        this.state = new SinglePageState();
+        //this.state = new SinglePageState();
 
     } 
     public static getInstance(): Viewer {
@@ -19,11 +31,15 @@ export class Viewer{
     }
 
 
-    private state: SinglePageState | HorizontalPageState | DoublePageState | ScrollPageState; // state pattern
+    private readonly target;
+    private readonly root;
+
+    //private state: SinglePageState | HorizontalPageState | DoublePageState | ScrollPageState; // state pattern
 
 
-    public changeState(newState: SinglePageState | HorizontalPageState | DoublePageState | ScrollPageState){
-        this.state = newState;
+
+    public changeState(){
+        //this.state = newState;
     }
 
     // ---------------------------------

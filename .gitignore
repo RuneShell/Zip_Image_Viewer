@@ -6,8 +6,10 @@
 *.drawio
 *.json
 
-
 test.ts
 
 structure.png
 TODO.md
+
+# temporary ignore. compiled typescript file.
+main.js

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="lib/variables.css">
     <link rel="stylesheet" href="lib/sidebar_left.css">
     <link rel="stylesheet" href="lib/sidebar_right.css">
-	<script src="lib/app.js"></script>
+
 
 </head>
 
@@ -19,6 +19,8 @@ body
 ------------------------------------>
 
 <!---- Main Element             ---->
+<div id="nextArrow" href="#next" class="Arrow">›</div>
+<div id="prevArrow" href="#prev" class="Arrow">‹</div>
 <div id="react-viewer"></div>
 
 
@@ -76,7 +78,10 @@ body
 
 
 
-	<div id="zipInfoBox">
+	<div id="bookshelf-box">
+		<div id="bookshelf">
+		<!-- handled by input_file.js -->
+		</div>
 		<div class="Modal Hidden-Letters" id="modal">
 			<div id="modalPage">
 				<h4></h4>
@@ -103,7 +108,6 @@ body
 				<p id="madeBy">made by <a id="runeShell" href="https://github.com/RuneShell">RuneShell</a></p>
 			</div>
 		</div>
-		<!-- handled by input_file.js -->
 	</div>
 
 
@@ -157,11 +161,14 @@ body
 
 
 <!---- Right Side               ---->
-<input id="selectFile" type="file" multiple hidden/>
-<div id="inputBox"">
+<div id="inputBox" onClick="this.querySelector('#selectFile').click()" onDragOver={handleDragOver} onDrop={handleDrop}>
+	<input id="selectFile" type="file" multiple hidden onChange={handleFileChange}/>
 	<div id="inputBoxInner"><strong><p class="Select-File-Text">Select</p><br><p class="Select-File-Text">Drag&Drop</p><br><p class="Select-File-Text">File</p></strong></div>
 </div>
 
 
+
+
+	<script src="lib/main.js"></script>
 </body>
 </html>

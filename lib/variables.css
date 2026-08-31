@@ -46,3 +46,29 @@ p {
 a {
 	text-decoration-line: none;
 }
+
+
+
+/*==============================
+ Arrow Buttons
+==============================*/
+.Arrow{
+	position: fixed;
+	top: 50%;
+	margin-top: -72px;
+	font-size: 100px;
+	color: var(--charcoal);
+	opacity: 1;
+	font-weight: bold;
+	cursor: pointer;
+	z-index: 1;
+}
+.Arrow:hover{
+	color: var(--porcelain);
+}
+#prevArrow{
+	left: 236px; /* 192px + 44px // 216? */
+}
+#nextArrow{
+	right: 64px;
+}

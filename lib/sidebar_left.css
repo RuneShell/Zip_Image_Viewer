@@ -31,26 +31,6 @@
 .Side-Navigation:hover #encoding{ display: inline-block; }
 .Side-Navigation:hover .Page-Edit-Wrap{ width: var(--inner-item-width-ratio) }
 
-.Arrow{
-	position: fixed;
-	top: 50%;
-	margin-top: -72px;
-	font-size: 100px;
-	color: var(--charcoal);
-	opacity: 1;
-	font-weight: bold;
-	cursor: pointer;
-	z-index: 1;
-}
-.Arrow:hover{
-	color: var(--porcelain);
-}
-#prevArrow{
-	left: 236px; /* 192px + 44px // 216? */
-}
-#nextArrow{
-	right: calc(var(--inputbox-width) + 44px);
-}
 
 
 
@@ -220,17 +200,17 @@
 
 
 /*=====================================*/
-#zipInfoBox{
+#bookshelf-box{
 	border-radius: 3px;
 	width: var(--inner-item-width-ratio);
 	height: 194px;
 	background-color: var(--porcelain);
 	overflow-y: scroll;
 }
-#zipInfoBox::-webkit-scrollbar{
+#bookshelf-box::-webkit-scrollbar{
 	width: 14px;
 }
-#zipInfoBox::-webkit-scrollbar-thumb{
+#bookshelf-box::-webkit-scrollbar-thumb{
 	background: var(--charcoal);
 	border-radius: 7px;
 	background-clip: padding-box;
@@ -276,7 +256,7 @@
 
 
 @-moz-document url-prefix(){
-	#zipInfoBox{
+	#bookshelf-box{
 		scrollbar-color: var(--charcoal) var(--porcelain); /* (Thumb, Scroll) */
 		scrollbar-width: thin;
 	}
@@ -454,9 +434,9 @@
 	height: 20px;
 	background-color: transparent;
 }
-#color::-webkit-color-swatch{
-	//border: none;
-}
+/* #color::-webkit-color-swatch{
+	border: none;
+} */
 #epubOptionItem_backgroundColor_white{ background-color: white;}
 #epubOptionItem_backgroundColor_black{ background-color: black;}
 #epubOptionItem_backgroundColor_moonGlow{ background-color: var(--moon-glow); border: 1px solid var(--porcerlain);}
