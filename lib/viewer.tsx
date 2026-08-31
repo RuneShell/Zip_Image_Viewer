@@ -5,12 +5,22 @@
 // Complement the **display methods** as `Strategy Pattern`.
 
 
-class DisplayPage{
+export class Viewer{
+    // Singleton Pattern
+    private static instance: Viewer;
+    private constructor() { // prevents new() from being called on this class
+
+        this.state = new SinglePageState();
+
+    } 
+    public static getInstance(): Viewer {
+        if (!Viewer.instance) Viewer.instance = new Viewer();
+        return Viewer.instance;
+    }
+
+
     private state: SinglePageState | HorizontalPageState | DoublePageState | ScrollPageState; // state pattern
 
-    constructor(){
-        this.state = new SinglePageState();
-    }
 
     public changeState(newState: SinglePageState | HorizontalPageState | DoublePageState | ScrollPageState){
         this.state = newState;
@@ -27,17 +37,18 @@ class DisplayPage{
     public nextPage(){
     }
 }
+export const viewer = Viewer.getInstance();
 
 
 // ---------------------------------
 // Page State Classes
 // ---------------------------------
+// State Pattern
 interface PageState{
-
 }
 
 class SinglePageState implements PageState{
-    // private strategy: DisplayImageStrategy | DisplayEpubStrategy | DisplayPdfStrategy; // strategy pattern
+    // private strategy: DisplayImgStrategy | DisplayEpubStrategy | DisplayPdfStrategy; // strategy pattern
 
 }
 
@@ -51,11 +62,12 @@ class ScrollPageState implements PageState{
 // ---------------------------------
 // Display Methods Classes
 // ---------------------------------
+// Strategy Pattern
 interface DisplayStrategy{
     
 }
 
-class DisplayImageStrategy implements DisplayStrategy{
+class DisplayImgStrategy implements DisplayStrategy{
 }
 class DisplayEpubStrategy implements DisplayStrategy{
 }

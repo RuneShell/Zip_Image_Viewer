@@ -1,0 +1,35 @@
+#imgBox{
+	position: absolute;
+	top: 0;
+	width: calc(100vw - 192px - var(--inputbox-width));
+	margin-left: 192px;
+	min-width: 690px;
+	display: flex;
+	justify-content: center;
+}
+.ImgPreview{
+	outline: 1px solid black;
+	width: auto;
+	height: 100vh;
+}
+.ImgScrollBox{
+	margin: 0 auto;
+	align-self: center;
+	min-width: 960px;
+	background-color: white;
+}
+.ImgScrollBox_Img{
+	display: block;
+	margin: 0 auto;
+	width: 690px;
+	height: auto;
+}
+
+#epubBox{
+/*
+	width: auto;
+	height: 100vh;
+*/
+	background-color: var(--moon-glow);
+
+}

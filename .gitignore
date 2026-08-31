@@ -4,7 +4,10 @@
 # Files
 *.txt
 *.drawio
+*.json
+
 
 test.ts
 
+structure.png
 TODO.md

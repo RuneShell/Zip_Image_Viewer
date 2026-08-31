@@ -1,0 +1,48 @@
+/*==============================
+ Main Variables             
+==============================*/
+
+:root{
+    /* == colors == */
+
+    /* left side bar */
+	--pink-lady: #F2DCB1;
+	--porcelain: #E8E7E6;
+	--charcoal: #424242;
+    --inner-item-width-ratio: 93.75%; /* inner items of left side bar */
+
+    /* icons-border */
+	--dandelion: #FFD166; /* image */
+	--denim: #1976D2; /* zip */
+	--fruit-salad: #4CAF50; /* epub */
+    --cinnabar: #E53935; /* pdf */
+    /* icons-background(selected) */
+	--vanilla: #F6E8A7;
+	--columbia-blue: #D0DCE7;
+	--tea-green: #C6E4AA;
+    --cotton-rose: #F6C1C0;
+
+    /* epub background */
+	--moon-glow: #F4EACD; /* #epubBox에 기본 적용됨  */
+	--lavendar: #D6E6F5;
+	--gossip: #B5D692;
+    
+	--raffia: #D9C29E; /* ? */
+
+    
+}
+body {
+	margin: 0;
+	background-color: black;
+	overflow-x: hidden;
+    user-select: none;  /* 마우스 드래그 선택 금지 */
+	-webkit-user-select: none; 
+    font-family: sans-serif;
+}
+
+p {
+	margin: 0;
+}
+a {
+	text-decoration-line: none;
+}
