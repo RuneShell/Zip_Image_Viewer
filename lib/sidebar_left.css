@@ -414,7 +414,7 @@
 	cursor: pointer;
 }
 /*
-#epubOptionItem_fontSize_range{}
+#epub_fontSize_range{}
 .Epub-Option-Item-Text{}
 #epubOptionItem_fontSize_text{}
 */
@@ -423,7 +423,7 @@
 	align-items: center;
 	flex-wrap: wrap;
 }
-.Epub-Option-Item-BackgroundColorBox{
+.Epub-BGColor-Option{
 	margin: 0 4px;
 	width: 22px;
 	height:13px;
@@ -437,12 +437,12 @@
 /* #color::-webkit-color-swatch{
 	border: none;
 } */
-#epubOptionItem_backgroundColor_white{ background-color: white;}
-#epubOptionItem_backgroundColor_black{ background-color: black;}
-#epubOptionItem_backgroundColor_moonGlow{ background-color: var(--moon-glow); border: 1px solid var(--porcerlain);}
-#epubOptionItem_backgroundColor_lavendar{ background-color: var(--lavendar);}
-#epubOptionItem_backgroundColor_gossip{ background-color: var(--gossip); }
-#epubOptionItem_backgroundColor_custom{ background-color: white; }
+#epub_bgColor_option_white{ background-color: white;}
+#epub_bgColor_option_black{ background-color: black;}
+#epub_bgColor_option_moonglow{ background-color: var(--moon-glow); border: 1px solid var(--porcerlain);}
+#epub_bgColor_option_lavendar{ background-color: var(--lavendar);}
+#epub_bgColor_option_gossip{ background-color: var(--gossip); }
+#epub_bgColor_option_custom{ background-color: white; }
 #customColorText{
 	color: black;
 	font-size: 0.2em;

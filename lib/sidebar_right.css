@@ -34,8 +34,17 @@
 }
 #inputBox:hover #inputBoxInner{
     display: flex;
-    transition: 0.1s ease;
 }
+/* 파일을 드래그해서 올렸을 때도 hover로 판정되도록. class active는 코드로 추가.*/
+#inputBox.active{
+	width: 375px;
+	transition: 0.1s ease; 
+}
+#inputBoxInner.active{
+	display: flex;
+	transition: 0.1s ease;
+}
+
 
 .Select-File-Text{
 	text-align: center;

@@ -1,4 +1,14 @@
 // 재귀로 하던 걸 async generator로 바꿔서 구현.
+import {
+    ZipReader,
+    BlobReader,
+    BlobWriter,
+} from "@zip.js/zip.js";
+import type {
+    Entry,
+    ZipReaderGetEntriesOptions,
+    EntryGetDataOptions
+} from "@zip.js/zip.js";
 
 
 // ---------------------------------
@@ -16,22 +26,35 @@ const FileType = {
     UNKNOWN: "unknown"
 } as const;
 type FileType = typeof FileType[keyof typeof FileType];
+ 
 
-
-interface Book<C extends BookContent = BookContent>{
-    format: FileType,
-    title: string,
-    pages: number,
-    content: C
+interface BaseBook{
+    title: string;
+    pages: number;
+    currentPageIdx: number;
 }
+export interface ImgBook extends BaseBook{
+    format: typeof FileType.IMG;
+    content: ImgSetContent;
+}
+export interface EpubBook extends BaseBook{
+    format: typeof FileType.EPUB;
+    content: EpubContent;
+}
+export interface PdfBook extends BaseBook{
+    format: typeof FileType.PDF;
+    content: PdfContent;
+}
+export type Book = ImgBook | EpubBook | PdfBook;
+
 
 
 // polymorphism
 interface BookContent{
 
 }
-class ImgSetContent implements BookContent{
-    private imgSet: Array<ImgInfo> = [];
+export class ImgSetContent implements BookContent{
+    private imgSet: ImgInfo[] = [];
 
     public async appendImg(file: File){
         let width = 0;
@@ -39,13 +62,15 @@ class ImgSetContent implements BookContent{
 
         if (GET_IMG_SHAPE){
             const img = new Image();
-            img.src = URL.createObjectURL(file);
+            const objectUrl = URL.createObjectURL(file); // 개당 100B-1Kb 정도의 메모리 사용.
 
-            await img.decode(); // Wait for the image to load and decode
+            img.src = objectUrl;
+            await img.decode();
+
             width = img.naturalWidth;
             height = img.naturalHeight;
 
-            URL.revokeObjectURL(img.src); // Clean up the object URL after use
+            URL.revokeObjectURL(objectUrl);
         }
 
         let imgInfo: ImgInfo = {
@@ -56,6 +81,13 @@ class ImgSetContent implements BookContent{
         }
 
         this.imgSet.push(imgInfo);
+    }
+
+    // public getImg(pageIdx: number): ImgInfo | null{
+    //     return this.imgSet[pageIdx] ? this.imgSet[pageIdx] : null;
+    // }
+    public getImgSet(): ImgInfo[]{
+        return this.imgSet;
     }
 
     public getImgCount(): number{ // 필요한가?
@@ -81,11 +113,39 @@ class PdfContent implements BookContent{
     }
 }
 
-interface ImgInfo{
+export interface ImgInfo{
     name: string,
     file: File,
     width: number,
     height: number
+}
+
+
+// ---------------------------------
+// Book State Classes
+// ---------------------------------
+// State Pattern
+abstract class BookState{
+    private currentPageIdx: number = 0;
+
+    public changeState(newState: BookState){
+        newState.currentPageIdx = this.currentPageIdx;
+        return newState;
+    }
+}
+
+class SinglePageState extends BookState{
+    private rotation: number = 0; // 0, 90, 180, 270
+
+}
+
+class DoublePageState extends BookState{
+    private isReverseView: boolean = false;
+    private hasFittingPage: boolean = false;
+
+}
+class ScrollPageState extends BookState{
+    // private heightOffset: number = 0; // 스크롤 위치를 저장하는 변수. 스크롤 위치를 유지하기 위해 필요.
 }
 
 
@@ -108,28 +168,27 @@ class FileInputManager{
     // File Import Methods
     // ---------------------------------
     public async acceptFiles(inputFiles: Array<File>): Promise<void>{
-        if(!inputFiles || inputFiles.length === 0) return;
-
-        console.log("FileInputManager.acceptFiles() called with files:", inputFiles);
         inputFiles.sort(SortAlphaNum);
         
         for await (const book of this.flattenZipEntriesGen(inputFiles)){
-            console.log("FileInputManager.acceptFiles() processing book:", book.title, "type:", book.format);
+            console.log("FileInputManager.acceptFiles() processing book:", book.title, "type:", book.format, book.content);
             this.books.push(book);
             // TODO : display book.
         }
+        
     }
+    
     
     // Core logic. 
     // TODO : 의미론적으로 flatten zip의 기능과 make book의 기능을 같이 가지고 있는데, 찢는게 낫지 않을까?
-    private async * flattenZipEntriesGen(inputFiles: Array<File>) : AsyncGenerator<Book<ImgSetContent> | Book<EpubContent> | Book<PdfContent>>{
+    private async * flattenZipEntriesGen(inputFiles: Array<File>) : AsyncGenerator<Book>{
         const stack: Array<File> = [...inputFiles].reverse(); // shallow copy, reverse for LIFO.
 
         let imgSetContent = new ImgSetContent();
         let currentDirPath: string | null = null; // 지금 group이 속한 디렉토리 경로. null이면 루트 디렉토리. (imgSetContent에 누적되는 img들의 경로를 판단하기 위해 필요)
 
         // 지금까지 imgSetContent에 누적한 img들을 book으로 확정하고, 새 imgSetContent를 시작하는 함수.
-        const flushImgSetContent = function*(): Generator<Book<ImgSetContent>>{
+        const flushImgSetContent = function*(): Generator<Book>{
             const imgCount = imgSetContent.getImgCount();
             if (imgCount == 0) return; // 아무것도 없으면 flush하지 않음.
 
@@ -137,8 +196,11 @@ class FileInputManager{
                 format: FileType.IMG,
                 title: currentDirPath ?? imgSetContent.getImgSetName(),
                 pages: imgCount,
-                content: imgSetContent
+                content: imgSetContent,
+                currentPageIdx: 0
             };
+
+            imgSetContent = new ImgSetContent(); // 새 imgSetContent 시작.
         }
 
         while (stack.length > 0){
@@ -147,7 +209,7 @@ class FileInputManager{
 
             switch (fileType){
                 case FileType.ZIP: {
-                    const unzipped = await zipReader.UnzipFile(file);
+                    const unzipped = await zipManager.UnzipFile(file);
                     unzipped.sort(SortAlphaNum);
                     stack.push(...unzipped.reverse()); // reverse for LIFO
                     break;
@@ -159,7 +221,7 @@ class FileInputManager{
                         currentDirPath = fileDirPath;
                     }
 
-                    imgSetContent.appendImg(file);
+                    await imgSetContent.appendImg(file);
                     break;
                 }
                 case FileType.EPUB: {
@@ -168,7 +230,8 @@ class FileInputManager{
                         format: FileType.EPUB,
                         title: file.name,
                         pages: 0, // EPUB의 경우 페이지 수를 미리 알 수 없음?
-                        content: epubContent
+                        content: epubContent,
+                        currentPageIdx: 0
                     };
                     break;
                 }
@@ -178,7 +241,8 @@ class FileInputManager{
                         format: FileType.PDF,
                         title: file.name,
                         pages: 0, // PDF의 경우 페이지 수를 미리 알 수 없음?
-                        content: pdfContent
+                        content: pdfContent,
+                        currentPageIdx: 0
                     };  
                     break;
                 }
@@ -196,19 +260,17 @@ class FileInputManager{
         // 마지막으로 남은 imgSetContent를 flush
         yield* flushImgSetContent();
     }
-
 }
 export const fileInputManager = FileInputManager.getInstance();
 
-class ZipReader {
-    private readonly getEntryOptions: zip.ZipReaderOptions = {
+class ZipManager {
+    private readonly getEntryOptions: ZipReaderGetEntriesOptions = {
         // filenameEncoding: "utf-8" // TODO : 인코딩 연결
-        // onprogress: (progress, total, entry) => { console.log("unzipping:", progress, total, entry); // TODO : 이거 되는거임?
     }
-    private DecryptOptions: zip.ZipReaderOptions = {
+    private DecryptOptions: EntryGetDataOptions = {  // https://gildas-lormeau.github.io/zip.js/api/interfaces/EntryGetDataCheckPasswordOptions.html?utm_source=chatgpt.com
         password: "",
         /*
-        onprogress: (index, max) => {
+        onprogress: (index, max) => { // https://gildas-lormeau.github.io/zip.js/api/interfaces/EntryGetDataCheckPasswordOptions.html?utm_source=chatgpt.com
             unzipProgress.value = index;
             unzipProgress.max = max;
         },
@@ -225,18 +287,18 @@ class ZipReader {
         const fileType = CheckFileType(file.name);
         if (fileType !== FileType.ZIP) throw new Error("File is not a zip file.");
 
-        const entries = this.getEntries(file, this.getEntryOptions);
+        const entries = await this.getEntries(file, this.getEntryOptions);
 
-        let entries2files: Array<File> | null = await this.tryDecryptEntries(entries, this.DecryptOptions.password); // 기본 비밀번호로 시도
+        let entries2files: File[] | null = await this.tryDecryptEntries(entries, this.DecryptOptions.password!); // 기본 비밀번호로 시도
         while (entries2files === null) {
             // TODO : unzipAbortController 
             // TODO : status : 비번 입력해주세요.
             // TODO : 비밀번호 입력 UI 띄우기.자체 freeze도 하고 해야겠지.
             const password = prompt(`${file.name}`, "password") ?? "";
             if (password === "") return []; // 비밀번호 입력 취소 시, 빈 배열 반환.
-            this.DecryptOptions.password = password;
+            if (typeof password === "string") this.DecryptOptions.password = password;
 
-            entries2files = await this.tryDecryptEntries(entries, this.DecryptOptions.password);
+            entries2files = await this.tryDecryptEntries(entries, this.DecryptOptions.password!);
             if (entries2files === null) {
                 alert("Incorrect password. Please try again."); // TODO : status : 비밀번호 틀렸습니다. 다시 입력해주세요.???
             }
@@ -248,31 +310,40 @@ class ZipReader {
     // ---------------------------------
     // Helper Methods
     // ---------------------------------
-    private getEntries(file: File, options: zip.ZipReaderOptions): Promise<Array<zip.Entry>> {
-        return new ZipReader(new zip.BlobReader(file), options).getEntries(options);
+    
+    private async getEntries(file: File, options?: ZipReaderGetEntriesOptions): Promise<Entry[]> {
+        const reader = new ZipReader(new BlobReader(file));
+        try{
+            return await reader.getEntries(options);
+        } finally{
+            reader.close();
+        }
     }
-    private async getData(entry: zip.Entry, options: zip.ZipReaderOptions): Promise<Blob> {
-        return await entry.getData(new zip.BlobWriter(), options);
+    private async getData(entry: Entry, options?: EntryGetDataOptions): Promise<Blob> {
+        if (entry.directory) throw new Error(`Cannot extract directory entry: ${entry.filename}`);
+        
+        return await entry.getData(new BlobWriter(), options);
     }
 
-    private async tryDecryptEntries(entries: entries, password: string): Promise<Array<zip.Entry> | null> {
-        let entries2files = [];
+    private async tryDecryptEntries(entries: Entry[], password: string): Promise<File[] | null> {
+        let entries2files: File[] = [];
 
         try{
             for (const entry of entries){
-                let entry2file = await this.getData(entry, (password === "") ? {} : this.DecryptOptions);
-                entry2file.name = entry.filename;
-                entries2files.push(entry2file);
+                if(entry.directory) continue; // 디렉토리 마커는 무시
+
+                const blob = await this.getData(entry, { password: password });
+                const file = new File([blob], entry.filename);
+
+                entries2files.push(file);
             }
             return entries2files;
         } catch (e) {
-            console.error("Failed to decrypt zip entries:", e);
-            // throw new Error("Failed to decrypt zip entries. Please check the password."); // TODO : 에러 처리
             return null;
         }
     }
 }
-const zipReader = new ZipReader();
+const zipManager = new ZipManager();
 
 // ---------------------------------
 // Helper Functions

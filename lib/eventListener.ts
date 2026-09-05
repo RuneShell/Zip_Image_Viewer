@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import {application, leftSidebar, rightSidebar,
         Application, LeftSidebar, RightSidebar
  } from "./HTMLVanilla.js";
-import { viewer, Viewer } from "./viewer.jsx";
+import { DisplayMode, readerStore, useWindowedImgUrlCache, ReaderState} from "./readerStore.ts";
 import { fileInputManager } from "./fileManager.js";
 
 
@@ -57,39 +57,47 @@ type AnyCommand = Command<any>; // Registry에 넣을 때 payload type이 달라
 
 
 
-// Viewer Commands
+// Commands
 // freeze?
 class PrevPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        this.viewer.prevPage();
+        readerStore.prevPage();
     }  
 }
 class NextPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        this.viewer.nextPage();
+        readerStore.nextPage();
     }  
 }
-class SetDisplayModeCommand implements Command<"single" | "horizontal" | "double" | "scroll"> {
-    constructor(private viewer: Viewer){}
-    execute(mode: "single" | "horizontal" | "double" | "scroll"){
+class SetDisplayModeCommand implements Command<DisplayMode> {
+    constructor(){}
+    execute(mode: DisplayMode){
         switch(mode){
-            case "single":
-                // this.viewer.changeState();
+            case 'single':
+                readerStore.setLayoutMode({ mode: 'single' });
+                break;
+            case 'double':
+                readerStore.setLayoutMode({ mode: 'double', isReverseView: false, hasAddFittingPage: false });
+                break;
+            case 'scroll': // TODO : 이 레이아웃을 변수로 관리하기
+                readerStore.setLayoutMode({ mode: 'scroll' });
+                break;
         }
+
     }
 }
 class AddFittingPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        // this.viewer.addFittingPage();
+        readerStore.toggleAddFittingPage();
     }  
 }
 class ToggleReverseViewCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        // this.viewer.reverseView();
+        readerStore.toggleReverseView();
     }
 }
 class SetFullscreenCommand implements Command {
@@ -106,13 +114,13 @@ function Command2Lambda(command: AnyCommand, payload?: unknown){
 
 // Command Registry
 const commands: Record<string, AnyCommand> = {
-    prevPage: new PrevPageCommand(viewer),
-    nextPage: new NextPageCommand(viewer),
+    prevPage: new PrevPageCommand(),
+    nextPage: new NextPageCommand(),
 
-    setDisplayMode: new SetDisplayModeCommand(viewer),
+    setDisplayMode: new SetDisplayModeCommand(),
 
-    addFittingPage: new AddFittingPageCommand(viewer),
-    toggleReverseView: new ToggleReverseViewCommand(viewer),
+    addFittingPage: new AddFittingPageCommand(),
+    toggleReverseView: new ToggleReverseViewCommand(), // TODO: 생성자 파라미터 통일하기.
     setFullscreen: new SetFullscreenCommand(application),
 }
 // ---------------------------------
@@ -172,12 +180,12 @@ for (const b of staticElementBindings){
 // ---------------------------------
 
 // File Drag&Drop
-application.HTMLElementById.inputBox.addEventListener("dragover", (e) => {
+application.rightSidebar.inputBox.selfElement.addEventListener("dragover", (e) => {
     e.stopPropagation(); 
 
     rightSidebar.freeze();}
 );
-application.HTMLElementById.inputBox.addEventListener("drop", async (e) => {
+application.rightSidebar.inputBox.selfElement.addEventListener("drop", async (e) => {
     e.stopPropagation();
     if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) return rightSidebar.unfreeze();
     const inputFileList = Array.from(e.dataTransfer.files);
@@ -192,7 +200,7 @@ application.HTMLElementById.inputBox.addEventListener("drop", async (e) => {
 // ---------------------------------
 
 // File Input Change
-application.HTMLElementById.selectFile.addEventListener("change", async (e) => {
+application.rightSidebar.selectFile.selfElement.addEventListener("change", async (e) => {
     rightSidebar.freeze();
     
     const files = (e.target as HTMLInputElement).files;
