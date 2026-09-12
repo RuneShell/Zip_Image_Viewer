@@ -9,15 +9,21 @@ import type {
     ZipReaderGetEntriesOptions,
     EntryGetDataOptions
 } from "@zip.js/zip.js";
+import { bookshelfStore } from "./readerStore.ts";
+import { renderReact } from "./viewer.tsx";
+import { leftSidebar } from "./HTMLVanilla.ts";
 
+import { Logger } from "./myLogger.ts";
+const logger = new Logger("FileInputManager");
 
 // ---------------------------------
 // global Constants
 // ---------------------------------
-const GET_IMG_SHAPE: boolean = true; // 이미지의 shape를 가져올지 여부. false면 width만 가져옴. <= 어차피 html 사이즈에 맞춰야해서 필요해야할지도 모름.
+const GET_IMG_SHAPE: boolean = false; // 이미지의 shape를 가져올지 여부. false면 width만 가져옴. <= 어차피 html 사이즈에 맞춰야해서 필요해야할지도 모름.
+// 현재 구현으로 이미지 decode 병목 포함 시 3.95 s
+//                              미포함 시 1.23 s
 
-
-const FileType = {
+export const FileType = {
     IMG: "img",
     ZIP: "zip", // ?
     DIR: "dir", // ?
@@ -26,12 +32,14 @@ const FileType = {
     UNKNOWN: "unknown"
 } as const;
 type FileType = typeof FileType[keyof typeof FileType];
- 
+type BookSourceType = {type: typeof FileType.DIR, sourceName: string} 
+                    | {type: typeof FileType.ZIP, sourceName: string};
 
 interface BaseBook{
     title: string;
     pages: number;
     currentPageIdx: number;
+    bookSource : BookSourceType | null | undefined; // 책이 어디서 왔는지. null이면 direct upload. undefined면 미정.
 }
 export interface ImgBook extends BaseBook{
     format: typeof FileType.IMG;
@@ -86,9 +94,17 @@ export class ImgSetContent implements BookContent{
     // public getImg(pageIdx: number): ImgInfo | null{
     //     return this.imgSet[pageIdx] ? this.imgSet[pageIdx] : null;
     // }
+    
     public getImgSet(): ImgInfo[]{
         return this.imgSet;
     }
+    
+    // public getPageNames(): string[]{ 
+    //     return this.imgSet.map(imgInfo => imgInfo.name); // 예상 page count: 약 300~1000장. 굳이 cache 필요 없음.
+    // }
+    // public getPageShapes(): {width: number, height: number}[]{
+    //     return this.imgSet.map(imgInfo => ({width: imgInfo.width, height: imgInfo.height}));
+    // }
 
     public getImgCount(): number{ // 필요한가?
         return this.imgSet.length;
@@ -96,6 +112,8 @@ export class ImgSetContent implements BookContent{
     public getImgSetName(): string{
         if (this.imgSet.length === 0) return "";
         const firstImgName = this.imgSet[0].name;
+        if (!firstImgName.includes("/")) return firstImgName; // 경로가 없는 경우, 그냥 첫 번째 이미지 이름 반환
+        
         const imgSetName = firstImgName.substring(0, firstImgName.lastIndexOf("/")); // 경로를 포함한 경우, 마지막 슬래시까지 잘라서 반환
         return imgSetName;
     }
@@ -121,34 +139,6 @@ export interface ImgInfo{
 }
 
 
-// ---------------------------------
-// Book State Classes
-// ---------------------------------
-// State Pattern
-abstract class BookState{
-    private currentPageIdx: number = 0;
-
-    public changeState(newState: BookState){
-        newState.currentPageIdx = this.currentPageIdx;
-        return newState;
-    }
-}
-
-class SinglePageState extends BookState{
-    private rotation: number = 0; // 0, 90, 180, 270
-
-}
-
-class DoublePageState extends BookState{
-    private isReverseView: boolean = false;
-    private hasFittingPage: boolean = false;
-
-}
-class ScrollPageState extends BookState{
-    // private heightOffset: number = 0; // 스크롤 위치를 저장하는 변수. 스크롤 위치를 유지하기 위해 필요.
-}
-
-
 
 // ---------------------------------
 // FileInputManager Class
@@ -167,25 +157,34 @@ class FileInputManager{
     // ---------------------------------
     // File Import Methods
     // ---------------------------------
-    public async acceptFiles(inputFiles: Array<File>): Promise<void>{
+    public async acceptFiles(inputFiles: File[]): Promise<void>{
+        logger.startTimer();
         inputFiles.sort(SortAlphaNum);
         
+        leftSidebar.statusReport.setStatusWorking("Processing files...");
         for await (const book of this.flattenZipEntriesGen(inputFiles)){
             console.log("FileInputManager.acceptFiles() processing book:", book.title, "type:", book.format, book.content);
             this.books.push(book);
-            // TODO : display book.
+
+            // Display to shelf
+            bookshelfStore.refreshBookshelf(this.books);
         }
-        
+        logger.endTimer(`${this.books.length} books loaded.`, "INFO");
+        leftSidebar.statusReport.setStatusNormal(`${this.books.length} books loaded.`);
     }
     
     
     // Core logic. 
     // TODO : 의미론적으로 flatten zip의 기능과 make book의 기능을 같이 가지고 있는데, 찢는게 낫지 않을까?
-    private async * flattenZipEntriesGen(inputFiles: Array<File>) : AsyncGenerator<Book>{
-        const stack: Array<File> = [...inputFiles].reverse(); // shallow copy, reverse for LIFO.
+
+    private async * flattenZipEntriesGen(inputFiles: File[]) : AsyncGenerator<Book>{
+
+         // shallow copy, reverse for LIFO, file to {file, {ZIP/DIR source, sourceName}} object
+        const stack: {file: File, source: BookSourceType | null}[] = [...inputFiles].reverse().map((file) => ({file, source : this.sourceOfInputFile(file)}));
 
         let imgSetContent = new ImgSetContent();
-        let currentDirPath: string | null = null; // 지금 group이 속한 디렉토리 경로. null이면 루트 디렉토리. (imgSetContent에 누적되는 img들의 경로를 판단하기 위해 필요)
+        let currentDirPath: string | null | undefined= undefined; // 지금 group이 속한 디렉토리 경로. null이면 루트 디렉토리. undefined이면 아직 그룹 시작 안함(초기 sentinel) (imgSetContent에 누적되는 img들의 경로를 판단하기 위해 필요)
+        let currentSource: BookSourceType | null | undefined = undefined; // 지금 group이 속한 source.
 
         // 지금까지 imgSetContent에 누적한 img들을 book으로 확정하고, 새 imgSetContent를 시작하는 함수.
         const flushImgSetContent = function*(): Generator<Book>{
@@ -194,24 +193,29 @@ class FileInputManager{
 
             yield {
                 format: FileType.IMG,
-                title: currentDirPath ?? imgSetContent.getImgSetName(),
+                title: currentDirPath ?? imgSetContent.getImgSetName(), // imgSet_title = directory path | first image name.
                 pages: imgCount,
                 content: imgSetContent,
-                currentPageIdx: 0
+                currentPageIdx: 0,
+                bookSource: currentSource
             };
 
             imgSetContent = new ImgSetContent(); // 새 imgSetContent 시작.
         }
+        leftSidebar.statusReport.setStatusWorking("Processing files...");
 
         while (stack.length > 0){
-            const file = stack.pop()!;
+            const {file, source} = stack.pop()!;
             const fileType = CheckFileType(file.name);
 
             switch (fileType){
                 case FileType.ZIP: {
-                    const unzipped = await zipManager.UnzipFile(file);
-                    unzipped.sort(SortAlphaNum);
-                    stack.push(...unzipped.reverse()); // reverse for LIFO
+                    leftSidebar.statusReport.setStatusWorking("Decompressing zip..."); 
+                    const unzipped = await zipManager.UnzipFile(file); // 1000 ms
+                    unzipped.sort(SortAlphaNum); // 1 ms
+
+                    // unzipped_items.source = {type: "ZIP", sourceName: zip name}
+                    stack.push(...unzipped.reverse().map(f => ({file: f, source: {type: FileType.ZIP, sourceName: file.name}}))); // 0 ms
                     break;
                 }
                 case FileType.IMG: {
@@ -219,6 +223,7 @@ class FileInputManager{
                     if (currentDirPath !== fileDirPath) { // 연속된 이미지 파일 두 개의 디렉토리 경로를 비교해서 경계를 자름.
                         yield* flushImgSetContent(); // 현재까지 누적한 imgSetContent를 flush하고, 새 imgSetContent를 시작.
                         currentDirPath = fileDirPath;
+                        currentSource = source; // group 경계에서 source 갱신.
                     }
 
                     await imgSetContent.appendImg(file);
@@ -231,7 +236,8 @@ class FileInputManager{
                         title: file.name,
                         pages: 0, // EPUB의 경우 페이지 수를 미리 알 수 없음?
                         content: epubContent,
-                        currentPageIdx: 0
+                        currentPageIdx: 0,
+                        bookSource: source
                     };
                     break;
                 }
@@ -242,7 +248,8 @@ class FileInputManager{
                         title: file.name,
                         pages: 0, // PDF의 경우 페이지 수를 미리 알 수 없음?
                         content: pdfContent,
-                        currentPageIdx: 0
+                        currentPageIdx: 0,
+                        bookSource: source
                     };  
                     break;
                 }
@@ -251,14 +258,18 @@ class FileInputManager{
                     break;
                 }
                 default: {
-                    // TODO: unknown 타입 처리.
+                    // TODO: unknown 타입 처리. 일단은 무시.
                     break;
                 }
             }
         }
-
         // 마지막으로 남은 imgSetContent를 flush
         yield* flushImgSetContent();
+    }
+
+    private sourceOfInputFile(file: File): BookSourceType | null{
+        // / 폴더째로 드래그/선택하면 webkitRelativePath가 채워짐 (직접 업로드된 개별 파일은 빈 문자열)
+        return (file as any).webkitRelativePath ? {type: FileType.DIR, sourceName: file.name} : null;
     }
 }
 export const fileInputManager = FileInputManager.getInstance();
@@ -459,3 +470,6 @@ function SortAlphaNum_(a: string, b: string): number{
 
 	return -1;
 }
+
+// ---------------------------------
+renderReact(); // React 렌더링을 여기서 호출. (파일 매니저 로딩 시점에 렌더링)

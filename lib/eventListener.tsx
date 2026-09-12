@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import {application, leftSidebar, rightSidebar,
         Application, LeftSidebar, RightSidebar
  } from "./HTMLVanilla.js";
-import { viewer, Viewer } from "./viewer.js";
+import { DisplayMode, readerStore, ReaderState} from "./readerStore.ts";
 import { fileInputManager } from "./fileManager.js";
 
 
@@ -22,38 +22,54 @@ type AnyCommand = Command<any>; // Registry에 넣을 때 payload type이 달라
 
 // freeze?
 class PrevPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        this.viewer.prevPage();
+        readerStore.prevPage();
     }  
 }
 class NextPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        this.viewer.nextPage();
+        readerStore.nextPage();
     }  
 }
-class SetDisplayModeCommand implements Command<"single" | "double" | "scroll"> {
-    constructor(private viewer: Viewer){}
-    execute(mode: "single" | "double" | "scroll"){
+class SetDisplayModeCommand implements Command<DisplayMode> {
+    constructor(){}
+    execute(mode: DisplayMode){
         switch(mode){
-            case "single":
-                // this.viewer.changeState();
+            case 'single':
+                readerStore.setLayoutMode({ mode: 'single' });
+                break;
+            case 'double':
+                readerStore.setLayoutMode({ mode: 'double', isReverseView: false, hasAddFittingPage: false });
+                break;
+            case 'scroll': // TODO : 이 레이아웃을 변수로 관리하기
+                readerStore.setLayoutMode({ mode: 'scroll', scrollBackgroundColor: 'white' });
+                break;
         }
+
     }
 }
 class AddFittingPageCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        // this.viewer.addFittingPage();
+        readerStore.toggleAddFittingPage();
     }  
 }
 class ToggleReverseViewCommand implements Command {
-    constructor(private viewer: Viewer){}
+    constructor(){}
     execute(){
-        // this.viewer.reverseView();
+        readerStore.toggleReverseView();
     }
 }
+
+class ToggleScrollBackgroundColorCommand implements Command {
+    constructor(){}
+    execute(){
+        readerStore.toggleScrollBackgroundColor();
+    }
+}
+
 class SetFullscreenCommand implements Command {
     constructor(private application: Application){}
     execute(){
@@ -63,15 +79,15 @@ class SetFullscreenCommand implements Command {
 
 
 class OpenModalCommand implements Command {
-    constructor(private leftSidebar: LeftSidebar){}
+    constructor(){}
     execute(){
-        // this.leftSidebar.openModal();
+        leftSidebar.modal.open();
     }
 }
 class CloseModalCommand implements Command {
-    constructor(private leftSidebar: LeftSidebar){}
+    constructor(){}
     execute(){ 
-        // this.leftSidebar.closeModal();
+        leftSidebar.modal.close();
     }
 }
 
@@ -120,17 +136,20 @@ class TestCommand implements Command {
 
 // Command Registry
 const commands: Record<string, AnyCommand> = {
-    prevPage: new PrevPageCommand(viewer),
-    nextPage: new NextPageCommand(viewer),
+    prevPage: new PrevPageCommand(),
+    nextPage: new NextPageCommand(),
 
-    setDisplayMode: new SetDisplayModeCommand(viewer),
+    setDisplayMode: new SetDisplayModeCommand(),
 
-    addFittingPage: new AddFittingPageCommand(viewer),
-    toggleReverseView: new ToggleReverseViewCommand(viewer),
+    addFittingPage: new AddFittingPageCommand(),
+    toggleReverseView: new ToggleReverseViewCommand(),
+
+    toggleScrollBackgroundColor: new ToggleScrollBackgroundColorCommand(),  
+
     setFullscreen: new SetFullscreenCommand(application),
 
-    openModal: new OpenModalCommand(leftSidebar),
-    closeModal: new CloseModalCommand(leftSidebar),
+    openModal: new OpenModalCommand(),
+    closeModal: new CloseModalCommand(),
 
     changeEpubFontSize: new ChangeEpubFontSizeCommand(),
     changeEpubBackgroundColor: new ChangeEpubBackgroundColorCommand(),
@@ -158,12 +177,12 @@ const StaticElements = {
     // left sidebar
     vertical_button: document.getElementById("vertical") as HTMLElement,
     vertical_double_button: document.getElementById("vertical_double") as HTMLElement,
-    // horizontal_button: document.getElementById("horizontal") as HTMLElement,
     scroll_button: document.getElementById("scroll") as HTMLElement,
     fullscreen_button: document.getElementById("fullscreen") as HTMLElement,
 
-    add_fitting_page_button: document.getElementById("add-fitting-page") as HTMLElement,
-    reverse_view_button: document.getElementById("reverse-view") as HTMLElement,
+    // [React]
+    // add_fitting_page_button: document.getElementById("add-fitting-page") as HTMLElement,
+    // reverse_view_button: document.getElementById("reverse-view") as HTMLElement,
 
     openModal: document.getElementById("openModal") as HTMLElement,
     modal: document.getElementById("modal") as HTMLElement, // click to close modal
@@ -180,7 +199,7 @@ const StaticElements = {
     // other
     test_button: document.getElementById("test") as HTMLElement,
 }
-console.log("StaticElements:", StaticElements);
+console.log("Static Elements:", StaticElements);
 
 interface StaticBinding{
     element: Document | HTMLElement;
@@ -196,7 +215,6 @@ const staticElementBindings: StaticBinding[] = [
     {element: document, event: "keydown", command: commands.nextPage, code: "Space"},
 
     {element: document, event: "keydown", command: commands.setDisplayMode, code: "KeyV", payload: "single"},
-    // {element: document, event: "keydown", command: commands.setDisplayMode, code: "KeyH", payload: "horizontal"},
     {element: document, event: "keydown", command: commands.setDisplayMode, code: "KeyD", payload: "double"},
     {element: document, event: "keydown", command: commands.setDisplayMode, code: "KeyS", payload: "scroll"},
     {element: document, event: "keydown", command: commands.setFullscreen,  code: "KeyF"},
@@ -204,19 +222,22 @@ const staticElementBindings: StaticBinding[] = [
     {element: document, event: "keydown", command: commands.addFittingPage,    code: "KeyA"},
     {element: document, event: "keydown", command: commands.toggleReverseView, code: "KeyR"},
 
+    {element: document, event: "keydown", command: commands.toggleScrollBackgroundColor, code: "KeyB"},
+
 
     // 2. click events
     {element: StaticElements.prevArrow, event: "click", command: commands.prevPage},
     {element: StaticElements.nextArrow, event: "click", command: commands.nextPage},
 
+
     {element: StaticElements.vertical_button,        event: "click", command: commands.setDisplayMode, payload: "single"},
     {element: StaticElements.vertical_double_button, event: "click", command: commands.setDisplayMode, payload: "double"},
-    // {element: StaticElements.horizontal_button,      event: "click", command: commands.setDisplayMode, payload: "horizontal"},
     {element: StaticElements.scroll_button,          event: "click", command: commands.setDisplayMode, payload: "scroll"},
     {element: StaticElements.fullscreen_button,      event: "click", command: commands.setFullscreen},
 
-    {element: StaticElements.add_fitting_page_button, event: "click", command: commands.addFittingPage},
-    {element: StaticElements.reverse_view_button,     event: "click", command: commands.toggleReverseView},
+    // [React events]
+    // {element: StaticElements.add_fitting_page_button, event: "click", command: commands.addFittingPage},
+    // {element: StaticElements.reverse_view_button,     event: "click", command: commands.toggleReverseView},
 
     {element: StaticElements.openModal, event: "click", command: commands.openModal},
     {element: StaticElements.modal, event: "click", command: commands.closeModal},

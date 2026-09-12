@@ -1,3 +1,9 @@
+.viewer-content{
+	min-width: 690px;
+}
+
+
+
 #imgBox{
 	position: absolute;
 	top: 0;
@@ -15,7 +21,7 @@
 .ImgScrollBox{
 	margin: 0 auto;
 	align-self: center;
-	min-width: 960px;
+	min-width: 690px;
 	background-color: white;
 }
 .ImgScrollBox_Img{
@@ -24,6 +30,52 @@
 	width: 690px;
 	height: auto;
 }
+
+
+.viewer-content{
+	position: absolute;
+	top: 0;
+	width: 100vw;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-left: -86px;
+	display: flex;
+	justify-content: center;
+}
+.Img-sheet{
+	outline: 1px solid black;
+	width: auto;
+	height: 100vh;
+}
+
+.Img-scroll-wrap{
+	display: flex;
+	flex-direction: column;
+	padding: 0 135px 0 135px;
+	background-color: white;
+}
+.Img-scroll-wrap.black{
+	background-color: black;
+}
+.Img-sheet-scroll{
+	display: block;
+	margin: 0 auto;
+	width: 690px;
+	height: auto;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #epubBox{
 /*

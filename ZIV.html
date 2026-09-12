@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="lib/variables.css">
     <link rel="stylesheet" href="lib/sidebar_left.css">
     <link rel="stylesheet" href="lib/sidebar_right.css">
-	<script src="./lib/zip.min.js"></script>
+	<link rel="stylesheet" href="lib/viewer.module.css">
 
 </head>
 
@@ -50,29 +50,12 @@ body
 		<div id="buttonBoxWrap">
 			<button class="ButtonBox-Btn" id="vertical">Vertical(V)</button>
 			<button class="ButtonBox-Btn" id="vertical_double">Double(D)</button>
-			<button class="ButtonBox-Btn" id="horizontal">Horizontal(H)</button>
 			<button class="ButtonBox-Btn" id="scroll">Scroll(S)</button>
 			<br>
 			<button class="ButtonBox-Btn" id="fullscreen">Fullscreen(F)</button> <!-- icon: ⛶ &#x26F6 -->
 		</div>
-		<div id="checkBoxWrap">
-			<div class="CheckBox-Item" id="checkbox-vertical_double">
-				<div class="Checkbox-Vertical-Double-Item">
-					<span class="ButtonBox-Chcb-Title Hidden-Letters">add-fitting-page(A)</span>
-					<div class="Checkbox">
-						<input type="checkbox" class="ButtonBox-Chcb" id="add-fitting-page">
-					</div>
-				</div>
-				<div class="Checkbox-Vertical-Double-Item">
-					<span class="ButtonBox-Chcb-Title Hidden-Letters">reverse-view(R)</span>
-					<div class="Checkbox">
-						<input type="checkbox" class="ButtonBox-Chcb" id="reverse-view">
-					</div>
-				</div>
-			</div>
-			<div class="CheckBox-Item" id="checkboxScroll">
-				<!--update-->
-			</div>
+		<div id="checkbox-wrap">
+			<!-- handled by Checkbox() in viewer.tsx (React) -->
 		</div>
 	</div>
 
@@ -80,7 +63,7 @@ body
 
 	<div id="bookshelf-box">
 		<div id="bookshelf">
-		<!-- handled by input_file.js -->
+		<!-- handled by Bookshelf() in viewer.tsx (React) -->
 		</div>
 		<div class="Modal Hidden-Letters" id="modal">
 			<div id="modalPage">
@@ -112,11 +95,11 @@ body
 
 
 
-	<div class="ImgInfoBox">
-		<div id="pageBox">
-			<!-- Handled by main_event.js -->
+	<div id="content-info-box">
+		<div id="page-box">
+			<!-- Handled by PageBox() in viewer.tsx (React) -->
 		</div>
-		<div class="InfoBox">
+		<div class="page-info-box">
 			<span id="count"> page count : <strong><span id="countNum">0</span></strong></span>
 			<span class="Hidden-Letters" id="openModal">?</span>
 		</div>

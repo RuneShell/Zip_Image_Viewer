@@ -39,6 +39,15 @@ class TitleBar extends HTMLVanillaObject { // 꾸미기 기능
 class StatusReport extends HTMLVanillaObject {
     protected selfElement = document.getElementById("status") as HTMLElement;
     public constructor() { super(); }
+
+    public setStatusNormal(msg: string){
+        this.changeText(msg);
+        this.changeCSS("color", "var(--pink-lady");
+    }    
+    public setStatusWorking(msg: string){
+        this.changeText(msg);
+        this.changeCSS("color", "red");
+    }
 }
 class EncodingSelector extends HTMLVanillaObject {
     protected selfElement = document.getElementById("encoding") as HTMLElement;
@@ -48,16 +57,58 @@ class DisplayButtonBox extends HTMLVanillaObject {
     protected selfElement = document.getElementById("buttonBox") as HTMLElement;
     public constructor() { super(); }
 }
+class CheckBoxDoubleWrap extends HTMLVanillaObject {
+    protected selfElement = document.getElementById("checkbox-double-wrap") as HTMLElement
+    public constructor() { super(); }
+
+    public isDisplay: boolean = false;
+    public toggleDisplay() {
+        this.isDisplay = !this.isDisplay;
+        this.changeCSS("display", this.isDisplay ? "flex" : "none");
+        return this.isDisplay;
+    }
+}
 class BookshelfBox extends HTMLVanillaObject {
     protected selfElement = document.getElementById("bookshelf-box") as HTMLElement;
     public constructor() { super(); } 
 
     private readonly bookshelf: HTMLElement = this.selfElement.querySelector("#bookshelf") as HTMLElement;
+
+    public displayBooks(){
+
+    }
+
 }
 class ContentInfoBox extends HTMLVanillaObject  {
-    protected selfElement = document.getElementById("ImgInfoBox") as HTMLElement;
+    protected selfElement = document.getElementById("content-info-box") as HTMLElement;
     public constructor() { super(); }
+
+    private readonly pageBox: HTMLElement = this.selfElement.querySelector("#page-box") as HTMLElement;
+    private readonly pageCount: HTMLElement = this.selfElement.querySelector("#countNum") as HTMLElement;
+
+
+    public displayPages(){
+
+    }
+    public setPageCount(count: number) {
+        this.pageCount.textContent = count.toString();
+    }
 }
+
+
+class Modal extends HTMLVanillaObject {
+    protected selfElement = document.getElementById("modal") as HTMLElement
+    public constructor() { super(); }
+
+    public open(){
+        this.changeCSS("display", "block");
+    }
+    public close(){
+        this.changeCSS("display", "none");
+    }
+}
+
+
 class EpubOptionBox extends HTMLVanillaObject {
     protected selfElement = document.getElementById("epubOptionWrap") as HTMLElement;
     public constructor() { super(); }
@@ -125,7 +176,13 @@ export class LeftSidebar extends HTMLVanillaObject {
     }
 
     protected selfElement = document.getElementById("sideNavigation") as HTMLElement;
+    public titleBar = new TitleBar();
+    public statusReport = new StatusReport();
+    public encodingSelector = new EncodingSelector();
 
+    public contentInfoBox = new ContentInfoBox();
+    
+    public modal = new Modal();
 
     // Methods
     
