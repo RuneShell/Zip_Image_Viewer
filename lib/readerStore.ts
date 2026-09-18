@@ -11,8 +11,8 @@ const logger = new Logger("readerStore", true);
 // Handle Img URL
 // ------------------------------
 
-const SCROLL_AHEAD_CACHE_SIZE = 8; // scroll 모드에서, 현재 페이지 기준으로 앞으로 미리 만들어둘 페이지 수
-const SCROLL_BEHIND_CACHE_SIZE = 4; // scroll 모드에서, 현재 페이지 기준으로 뒤로 미리 만들어둘 페이지 수
+export const SCROLL_AHEAD_CACHE_SIZE = 6; // scroll 모드에서, 현재 페이지 기준으로 앞으로 미리 만들어둘 페이지 수
+export const SCROLL_BEHIND_CACHE_SIZE = 4; // scroll 모드에서, 현재 페이지 기준으로 뒤로 미리 만들어둘 페이지 수
 
 export class WindowedImgUrlCache {
     private readonly imgSet: ImgInfo[];
@@ -23,7 +23,10 @@ export class WindowedImgUrlCache {
     private pageIdx: number;
     private startIdx: number; // 실제 캐시된 범위의 시작 인덱스
     private endIdx: number;
-    private cache: Map<number, string>
+    private cache: Map<number, string>;
+
+    private pendingPageIdx: number | null = null; // 예약된 페이지 인덱스
+    private refreshScheduled: boolean = false;
 
     constructor(imgSet: ImgInfo[], aheadCacheSize: number, behindCacheSize: number) {
         this.imgSet = imgSet;
@@ -38,7 +41,7 @@ export class WindowedImgUrlCache {
         this.setPage(this.pageIdx);
     }
 
-    public setPage(newPageIdx: number){
+    public setPage(newPageIdx: number) {
         if (newPageIdx < 0 || newPageIdx >= this.imgSetLength) {
             console.warn(`setPage: newPageIdx ${newPageIdx} is out of bounds (0, ${this.imgSetLength - 1})`);
             return;
@@ -47,54 +50,27 @@ export class WindowedImgUrlCache {
         const newStartIdx = Math.max(0, newPageIdx - this.behindCacheSize);
         const newEndIdx = Math.min(this.imgSetLength - 1, newPageIdx + this.aheadCacheSize);
 
-        if (this.startIdx <= newPageIdx && newPageIdx <= this.endIdx) { // 캐시된 window 범위 내에서 이동하는 경우
-            
-            // TODO: refresh window here
-            // cache가 너무 커지는 경우, refresh가 너무 오래 걸릴 수 있기에, 추후 여기서 분기를 내야 함.
-
-            // 반동기 작업의 뒤쪽 구현은 ensureWindow()에서 처리하도록 함.
-        }
-        else{ // 캐시를 다시 만들어야 하는 경우
-            for (const url of this.cache.values()) {
-                URL.revokeObjectURL(url);
-            }
-            this.cache.clear();
-
-            this.cache = new Map<number, string>();
+        if (!this.cache.has(newPageIdx)) { // 현재 페이지는 즉시 확보
             this.cache.set(newPageIdx, URL.createObjectURL(this.imgSet[newPageIdx].file));
-
-
-            // TODO : refresh window here
         }
-    }
-
-    public ensureWindow(newPageIdx: number) {
-        // TODO : 일단 setPage()랑 중복 부분이 많음. 되는지 확인용.
-        if (newPageIdx < 0 || newPageIdx >= this.imgSetLength) {
-            console.warn(`setPage: newPageIdx ${newPageIdx} is out of bounds (0, ${this.imgSetLength - 1})`);
-            return;
-        }
-
-        const newStartIdx = Math.max(0, newPageIdx - this.behindCacheSize);
-        const newEndIdx = Math.min(this.imgSetLength - 1, newPageIdx + this.aheadCacheSize);
 
         if (this.startIdx <= newPageIdx && newPageIdx <= this.endIdx) {
             if (this.pageIdx < newPageIdx) { // 앞으로 이동하는 경우
+                for(let i = this.endIdx + 1; i <= newEndIdx; i++){ // 뒤에 추가
+                    this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+                }
                 for(let i = this.startIdx; i < newStartIdx; i++){ // 앞에 지움
                     URL.revokeObjectURL(this.cache.get(i)!);
                     this.cache.delete(i);
                 }
-                for(let i = this.endIdx + 1; i <= newEndIdx; i++){ // 뒤에 추가
-                    this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
-                }
             }
             else if (newPageIdx < this.pageIdx) { // 뒤로 이동하는 경우
+                for(let i = this.startIdx - 1; i >= newStartIdx; i--){ // 앞에 추가 
+                    this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+                }
                 for(let i = this.endIdx; i > newEndIdx; i--){ // 뒤에 지움
                     URL.revokeObjectURL(this.cache.get(i)!);
                     this.cache.delete(i);
-                }
-                for(let i = this.startIdx - 1; i >= newStartIdx; i--){ // 앞에 추가 
-                    this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
                 }
             }
         }
@@ -106,11 +82,86 @@ export class WindowedImgUrlCache {
                 this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
             }
         }
-
-        this.pageIdx = newPageIdx;
-        this.startIdx = newStartIdx;
-        this.endIdx = newEndIdx;
     }
+
+    // Delayed refresh mechanism (depricated becuase it renders only ONE image without windowHeight info)
+
+    // public setPage(newPageIdx: number){
+    //     if (newPageIdx < 0 || newPageIdx >= this.imgSetLength) {
+    //         console.warn(`setPage: newPageIdx ${newPageIdx} is out of bounds (0, ${this.imgSetLength - 1})`);
+    //         return;
+    //     }
+
+    //     // 현재 페이지는 즉시 확보
+    //     if (!this.cache.has(newPageIdx)) {
+    //         this.cache.set(newPageIdx, URL.createObjectURL(this.imgSet[newPageIdx].file));
+    //     }
+
+    //     this.pageIdx = newPageIdx;
+    //     this.scheduleRefresh(newPageIdx);
+    // }
+
+    // private scheduleRefresh(newPageIdx: number) {
+    //     this.pendingPageIdx = newPageIdx;
+    //     if (this.refreshScheduled) return;
+    //     this.refreshScheduled = true;
+
+    //     requestIdleCallback(() => {
+    //         this.refreshScheduled = false;
+
+    //         const target = this.pendingPageIdx;
+    //         this.pendingPageIdx = null;
+
+    //         if(target !== null) {
+    //             this.ensureWindow(target);
+    //         }
+    //     }, { timeout: 100 });
+    // }
+
+    // private ensureWindow(newPageIdx: number) {
+    //     // TODO : 일단 setPage()랑 중복 부분이 많음. 되는지 확인용.
+    //     if (newPageIdx < 0 || newPageIdx >= this.imgSetLength) {
+    //         console.warn(`setPage: newPageIdx ${newPageIdx} is out of bounds (0, ${this.imgSetLength - 1})`);
+    //         return;
+    //     }
+
+    //     const newStartIdx = Math.max(0, newPageIdx - this.behindCacheSize);
+    //     const newEndIdx = Math.min(this.imgSetLength - 1, newPageIdx + this.aheadCacheSize);
+
+    //     if (this.startIdx <= newPageIdx && newPageIdx <= this.endIdx) {
+    //         if (this.pageIdx < newPageIdx) { // 앞으로 이동하는 경우
+    //             for(let i = this.endIdx + 1; i <= newEndIdx; i++){ // 뒤에 추가
+    //                 this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+    //             }
+    //             for(let i = this.startIdx; i < newStartIdx; i++){ // 앞에 지움
+    //                 URL.revokeObjectURL(this.cache.get(i)!);
+    //                 this.cache.delete(i);
+    //             }
+    //         }
+    //         else if (newPageIdx < this.pageIdx) { // 뒤로 이동하는 경우
+    //             for(let i = this.startIdx - 1; i >= newStartIdx; i--){ // 앞에 추가 
+    //                 this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+    //             }
+    //             for(let i = this.endIdx; i > newEndIdx; i--){ // 뒤에 지움
+    //                 URL.revokeObjectURL(this.cache.get(i)!);
+    //                 this.cache.delete(i);
+    //             }
+    //         }
+    //     }
+    //     else{
+    //         for(let i = newStartIdx; i < newPageIdx; i++){ // 앞
+    //             this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+    //         }
+    //         for (let i = newPageIdx + 1; i <= newEndIdx; i++){ // 뒤
+    //             this.cache.set(i, URL.createObjectURL(this.imgSet[i].file));
+    //         }
+    //     }
+
+    //     this.pageIdx = newPageIdx;
+    //     this.startIdx = newStartIdx;
+    //     this.endIdx = newEndIdx;
+    // }
+
 
     public getURL(pageIdx: number): string | undefined {
         return this.cache.get(pageIdx);
@@ -194,7 +245,7 @@ export const readerStore = {
             readerStore.setCurrentPage(anchorPage);
         }
         else {
-            readerStore.setCurrentPage(readerState.currentPage);
+            readerStore.setCurrentPage(readerState.currentPage, {scrollTo: true});
         }
 
     },
@@ -228,41 +279,62 @@ export const readerStore = {
         const currentPage = book.currentPageIdx; // 읽던 책 페이지는 아래의 setCurrentPage에서 처리됨.
         logger.debug(`selectBook: ${readerState.currentPage} -> ${currentPage}`);
 
-        // Generate cache.
-        if (book.format === 'img') {
-            refreshImgCache(book as ImgBook);
-        }
-
         leftSidebar.contentInfoBox.setPageCount(book.pages);
 
-        if (readerState.layoutState.mode === 'double') {
-            const anchorPage = currentPage - (currentPage & 1);
-            readerStore.setCurrentPage(anchorPage);
+
+        if (book.format === 'img') {
+            // Generate img cache.
+            refreshImgCache(book as ImgBook);
+            
+            if (readerState.layoutState.mode === 'double') {
+                const anchorPage = currentPage - (currentPage & 1);
+                readerStore.setCurrentPage(anchorPage);
+            }
+            else readerStore.setCurrentPage(currentPage, {scrollTo: true});
         }
-        else readerStore.setCurrentPage(currentPage);
+        else if (book.format === 'epub') {
+            viewerListeners.forEach(l => l());
+        }
     },
 
 
     prevPage(){
-        let count = 1;
-        if (readerState.layoutState.mode === 'double'){
-            count = (readerState.layoutState.isReverseView) ? -2 : 2;
+        if (readerState.layoutState.mode === 'single') {
+            const count = 1;
+            const prevPage = Math.max(0, readerState.currentPage - count);
+            readerStore.setCurrentPage(prevPage);
         }
-
-        const prevPage = Math.max(0, readerState.currentPage - count);
-        readerStore.setCurrentPage(prevPage);
-    },
-    nextPage(){
-        let count = 1;
-        if (readerState.layoutState.mode === 'double'){
-            count = (readerState.layoutState.isReverseView) ? -2 : 2;
+        else if (readerState.layoutState.mode === 'double'){
+            const count = (readerState.layoutState.isReverseView) ? -2 : 2;
+            const prevPage = Math.max(0, readerState.currentPage - count);
+            readerStore.setCurrentPage(prevPage);
+        }
+        else if (readerState.layoutState.mode === 'scroll') { // scroll up to: 0.88 * viewPortScroll.
+            window.scrollTo({ top: Math.max(0, window.scrollY - 0.88 * window.innerHeight), behavior: 'smooth' });
         }
         
-        const nextPage = readerState.selectedBook ? Math.min(readerState.selectedBook.pages - 1, readerState.currentPage + count) : readerState.currentPage;
-        readerStore.setCurrentPage(nextPage);
     },
+    nextPage(){
+        if (readerState.layoutState.mode === 'single') {
+            const count = 1;
+            const nextPage = readerState.selectedBook ? Math.min(readerState.selectedBook.pages - 1, readerState.currentPage + count) : readerState.currentPage;
+            readerStore.setCurrentPage(nextPage);
+        }
+        else if (readerState.layoutState.mode === 'double'){
+            const count = (readerState.layoutState.isReverseView) ? -2 : 2;
+            const nextPage = readerState.selectedBook ? Math.min(readerState.selectedBook.pages - 1, readerState.currentPage + count) : readerState.currentPage;
+            readerStore.setCurrentPage(nextPage);
+        }
+        else if (readerState.layoutState.mode === 'scroll') { // scroll down to: 0.88 * viewPortScroll.
+            window.scrollTo({ top: Math.min(window.scrollY + 0.88 * window.innerHeight, (readerState.selectedBook?.content as ImgSetContent).totalHeight - window.innerHeight), behavior: 'smooth' });
+        }        
+    },
+
     // TODO: 이거 이미지 전용인데 왜 혼용해서 사용함? 어떻게든 고쳐야됨.
-    setCurrentPage(pageIdx: number){ // 1 ms
+    setCurrentPage(pageIdx: number, options?: { scrollTo?: boolean }): void { // 1 ms // scrollTo: 수동으로 scroll을 옮겨줘야 하는 이벤트. 사용자가 스크롤을 움직일 떄는 필요없기 떄문.
+        // if (pageIdx === readerState.currentPage) return; // 이미 같은 페이지면 무시 // 사용할 수 없는 이유 : 모드가 바뀌거나, 책이 바뀌거나.
+        const scrollTo = options?.scrollTo ?? false;
+
         const book = readerState.selectedBook;
         if (!book || pageIdx < 0 || pageIdx >= book.pages) return;
 
@@ -270,9 +342,20 @@ export const readerStore = {
         book.currentPageIdx = pageIdx; // 책 객체에도 현재 페이지를 기록
 
         imgCache?.setPage(pageIdx);
-        viewerListeners.forEach(l => l());  
-        imgCache?.ensureWindow(pageIdx);
+        viewerListeners.forEach(l => l()); 
+
+        if(readerState.layoutState.mode === 'scroll' && scrollTo) {
+            // requestAnimationFrame to avoid collision with rendering.
+            const top = (readerState.selectedBook as ImgBook).content.accumulatedHeight[pageIdx];
+            requestAnimationFrame(() => {
+                window.scrollTo({top, behavior: 'auto'});
+            });
+        }
+        
         logger.debug(`setCurrentPage: ${pageIdx} (selectedPages: ${JSON.stringify(readerState.selectedPages)})`);
+    },
+    getCurrentPage(): number {
+        return readerState.currentPage;
     },
 
     // ------------------------------
@@ -281,6 +364,7 @@ export const readerStore = {
     getImgUrl(pageIdx: number): string | undefined {
         return imgCache?.getURL(pageIdx);
     },
+
 }
 
 

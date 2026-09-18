@@ -12,6 +12,7 @@ import type {
 import { bookshelfStore } from "./readerStore.ts";
 import { renderReact } from "./viewer.tsx";
 import { leftSidebar } from "./HTMLVanilla.ts";
+import { fileParser } from "./fileParser.ts";
 
 import { Logger } from "./myLogger.ts";
 const logger = new Logger("FileInputManager");
@@ -19,9 +20,6 @@ const logger = new Logger("FileInputManager");
 // ---------------------------------
 // global Constants
 // ---------------------------------
-const GET_IMG_SHAPE: boolean = false; // 이미지의 shape를 가져올지 여부. false면 width만 가져옴. <= 어차피 html 사이즈에 맞춰야해서 필요해야할지도 모름.
-// 현재 구현으로 이미지 decode 병목 포함 시 3.95 s
-//                              미포함 시 1.23 s
 
 export const FileType = {
     IMG: "img",
@@ -63,23 +61,22 @@ interface BookContent{
 }
 export class ImgSetContent implements BookContent{
     private imgSet: ImgInfo[] = [];
+    
+    // For scroll view virtualization.
+    public accumulatedHeight: number[] = new Array(0);
+    public totalHeight: number = 0;
+    private readonly scrollWidth: number = 690; // px
 
     public async appendImg(file: File){
         let width = 0;
         let height = 0;
+        // Time benchmark for get {width, height}:
+        //      using `await fileParser.getImgShape()` : 1.375 s
+        //      using `await Img.decode()` : 3.95 s
+        //      not calculating: 1.23 s
+        ({width, height} = await fileParser.getImgShape(file)); // 0-1 ms per file.
 
-        if (GET_IMG_SHAPE){
-            const img = new Image();
-            const objectUrl = URL.createObjectURL(file); // 개당 100B-1Kb 정도의 메모리 사용.
-
-            img.src = objectUrl;
-            await img.decode();
-
-            width = img.naturalWidth;
-            height = img.naturalHeight;
-
-            URL.revokeObjectURL(objectUrl);
-        }
+        // this.totalHeight += height;
 
         let imgInfo: ImgInfo = {
             name: file.name,
@@ -89,6 +86,21 @@ export class ImgSetContent implements BookContent{
         }
 
         this.imgSet.push(imgInfo);
+        
+        this.updateAccumulatedHeight();
+    }
+
+    private updateAccumulatedHeight(){
+        this.accumulatedHeight = new Array(this.imgSet.length + 1); // last index means bottom.
+        let sum = 0;
+
+        for (let i = 0; i < this.imgSet.length; i++){
+            this.accumulatedHeight[i] = sum;
+            sum += this.imgSet[i].height * (this.scrollWidth / this.imgSet[i].width);
+        }
+
+        this.accumulatedHeight[this.imgSet.length] = sum; // sentinel.
+        this.totalHeight = sum;
     }
 
     // public getImg(pageIdx: number): ImgInfo | null{
@@ -118,16 +130,20 @@ export class ImgSetContent implements BookContent{
         return imgSetName;
     }
 }
-class EpubContent implements BookContent{
-    private epubFile: File;
+export class EpubContent implements BookContent{
+    private file: File;
     public constructor(epubFile: File){
-        this.epubFile = epubFile;
+        this.file = epubFile;
+    }
+
+    public getFile(): File{
+        return this.file;
     }
 }
-class PdfContent implements BookContent{
-    private pdfFile: File;
+export class PdfContent implements BookContent{
+    private file: File;
     public constructor(pdfFile: File){
-        this.pdfFile = pdfFile;
+        this.file = pdfFile;
     }
 }
 
@@ -163,7 +179,7 @@ class FileInputManager{
         
         leftSidebar.statusReport.setStatusWorking("Processing files...");
         for await (const book of this.flattenZipEntriesGen(inputFiles)){
-            console.log("FileInputManager.acceptFiles() processing book:", book.title, "type:", book.format, book.content);
+            logger.debug(`FileInputManager.acceptFiles() processing book: ${book.title}, type: ${book.format}`);
             this.books.push(book);
 
             // Display to shelf

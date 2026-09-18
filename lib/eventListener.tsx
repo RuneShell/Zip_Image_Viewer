@@ -38,7 +38,7 @@ class SetDisplayModeCommand implements Command<DisplayMode> {
     execute(mode: DisplayMode){
         switch(mode){
             case 'single':
-                readerStore.setLayoutMode({ mode: 'single' });
+                readerStore.setLayoutMode({ mode: 'single', rotationAngle: 0, zoomLevel: 1, translation: { x: 0, y: 0 } });
                 break;
             case 'double':
                 readerStore.setLayoutMode({ mode: 'double', isReverseView: false, hasAddFittingPage: false });

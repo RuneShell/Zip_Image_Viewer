@@ -38,7 +38,7 @@
 	width: 100vw;
 	left: 50%;
 	transform: translateX(-50%);
-	margin-left: -86px;
+	margin-left: 86px;
 	display: flex;
 	justify-content: center;
 }
@@ -49,21 +49,20 @@
 }
 
 .Img-scroll-wrap{
-	display: flex;
-	flex-direction: column;
-	padding: 0 135px 0 135px;
+	/* padding: 0 135px 0 135px; */
+	width: 960px; /* 690 + 270 */
 	background-color: white;
 }
 .Img-scroll-wrap.black{
 	background-color: black;
 }
 .Img-sheet-scroll{
-	display: block;
-	margin: 0 auto;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
 	width: 690px;
 	height: auto;
 }
-
 
 
 

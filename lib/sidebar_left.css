@@ -109,21 +109,23 @@
 	transition: 0.1s ease;
 }
 
+.checkbox-wrap{
+	display: flex;
+	flex-direction: row;
+	justify-content: space-evenly;
+	align-items: center;
+}
 .CheckBox-Item{
 	display: flex;
 	justify-content: space-around;
+	align-items: center;
+	height: 17px;
 }
-/* #checkbox-double{
-	display: none;
-} */
-.Checkbox-Double-Item{
-	display: flex;
-	justify-content: space-around;
-}
+
 .ButtonBox-Chcb-Title{
 	color: var(--porcelain);
 	font-size: 0.8em;
-	margin-right: 10px;
+	margin: 0 10px 0 10px;
 }
 
 .ButtonBox-Chcb{
