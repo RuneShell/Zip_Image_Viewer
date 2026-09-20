@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 
-import { ImgSetContent, Book, ImgBook, ImgInfo } from "./fileManager.tsx";
+import { ImgSetContent, Book, ImgBook, ImgInfo, FileType } from "./fileManager.tsx";
 import {LayoutMode} from "./viewer.tsx";
 import { leftSidebar } from "./HTMLVanilla.ts";
+import { DocumentViewer, epubStyle } from "./documentWrap.ts";
+import { EpubBook, epubCurrentDetail } from "./fileManager.tsx";
 
 import { Logger } from "./myLogger.ts";
 const logger = new Logger("readerStore", true);
@@ -193,17 +195,26 @@ type LayoutState = {
                         hasAddFittingPage: boolean;
                     } | {  
                         mode: 'scroll';
-                        scrollBackgroundColor: string;
+                        imgScrollBackgroundColor: string;
                     };
 
 export type ReaderState = {
     layoutState: LayoutState;
     selectedBook: Book | null;
+     // for img
     currentPage: number;
     selectedPages: number | [number, number];
+     // for epub
+    currentDetail: epubCurrentDetail | null;
+    epubStyle: epubStyle;
+
 };
 
-
+// React Ref HTML, Viewer elements.
+// let epubContainerHTML: HTMLElement | null = null;
+let epubViewer: DocumentViewer | null = null;
+// let pdfContainerHTML: HTMLElement | null = null;
+let pdfViewer: DocumentViewer | null = null;
 
 let readerState: ReaderState = {
     layoutState: { mode: 'single', 
@@ -212,6 +223,8 @@ let readerState: ReaderState = {
     selectedBook: null,
     currentPage: -1,
     selectedPages: -1,
+    currentDetail: null,
+    epubStyle: DocumentViewer.getStyle(),
 };
 const viewerListeners = new Set<() => void>();
 
@@ -265,10 +278,10 @@ export const readerStore = {
     },
 
     // scroll layout options
-    toggleScrollBackgroundColor() {
+    setScrollBackgroundColor(newColor: string = '') {
         if (readerState.layoutState.mode === 'scroll') {
-            const newColor = readerState.layoutState.scrollBackgroundColor === 'white' ? 'black' : 'white';
-            readerState = { ...readerState, layoutState: { ...readerState.layoutState, scrollBackgroundColor: newColor } };
+            if (newColor === '') newColor = (readerState.layoutState.imgScrollBackgroundColor === 'white') ? 'black' : 'white'; // toggle if no color selected.
+            readerState = { ...readerState, layoutState: { ...readerState.layoutState, imgScrollBackgroundColor: newColor } };
             readerStore.setCurrentPage(readerState.currentPage);
         }
     },
@@ -276,13 +289,13 @@ export const readerStore = {
 
     selectBook(book: Book) {
         readerState = { ...readerState, selectedBook: book};
-        const currentPage = book.currentPageIdx; // 읽던 책 페이지는 아래의 setCurrentPage에서 처리됨.
-        logger.debug(`selectBook: ${readerState.currentPage} -> ${currentPage}`);
-
-        leftSidebar.contentInfoBox.setPageCount(book.pages);
-
 
         if (book.format === 'img') {
+            const currentPage = book.currentPageIdx; // 읽던 책 페이지는 아래의 setCurrentPage에서 처리됨.
+            logger.debug(`selectBook: ${readerState.currentPage} -> ${currentPage}`);
+
+            leftSidebar.contentInfoBox.setPageCount(book.pages);
+
             // Generate img cache.
             refreshImgCache(book as ImgBook);
             
@@ -294,51 +307,86 @@ export const readerStore = {
         }
         else if (book.format === 'epub') {
             viewerListeners.forEach(l => l());
+            // to `OpenEpub()` in readerStore.ts.
         }
+
     },
 
 
     prevPage(){
-        if (readerState.layoutState.mode === 'single') {
-            const count = 1;
-            const prevPage = Math.max(0, readerState.currentPage - count);
-            readerStore.setCurrentPage(prevPage);
+        const book = readerState.selectedBook;
+        if (!book) return;
+
+        if (book.format === 'img') {
+            if (readerState.layoutState.mode === 'single') {
+                const count = 1;
+                const prevPage = Math.max(0, readerState.currentPage - count);
+                readerStore.setCurrentPage(prevPage);
+            }
+            else if (readerState.layoutState.mode === 'double'){
+                const count = (readerState.layoutState.isReverseView) ? -2 : 2;
+                const prevPage = Math.max(0, readerState.currentPage - count);
+                readerStore.setCurrentPage(prevPage);
+            }
+            else if (readerState.layoutState.mode === 'scroll') { // scroll up to: 0.88 * viewPortScroll.
+                window.scrollTo({ top: Math.max(0, window.scrollY - 0.88 * window.innerHeight), behavior: 'smooth' });
+            }
         }
-        else if (readerState.layoutState.mode === 'double'){
-            const count = (readerState.layoutState.isReverseView) ? -2 : 2;
-            const prevPage = Math.max(0, readerState.currentPage - count);
-            readerStore.setCurrentPage(prevPage);
+        else if (book.format === 'epub') {
+            epubViewer?.prev();
+            readerState = { ...readerState, currentPage: -1, selectedPages: -1, currentDetail: book.currentDetail };
+            viewerListeners.forEach(l => l());
         }
-        else if (readerState.layoutState.mode === 'scroll') { // scroll up to: 0.88 * viewPortScroll.
-            window.scrollTo({ top: Math.max(0, window.scrollY - 0.88 * window.innerHeight), behavior: 'smooth' });
+        else if (book.format === 'pdf') {
+            // pdfViewer?.prev();
         }
-        
     },
     nextPage(){
-        if (readerState.layoutState.mode === 'single') {
-            const count = 1;
-            const nextPage = readerState.selectedBook ? Math.min(readerState.selectedBook.pages - 1, readerState.currentPage + count) : readerState.currentPage;
-            readerStore.setCurrentPage(nextPage);
+        let book = readerState.selectedBook;
+        if (!book) return;
+
+        if (book.format === FileType.IMG) {
+            book = book as ImgBook;
+            if (readerState.layoutState.mode === 'single') {
+                const count = 1;
+                const nextPage = readerState.selectedBook ? Math.min(book.pages - 1, readerState.currentPage + count) : readerState.currentPage;
+                readerStore.setCurrentPage(nextPage);
+            }
+            else if (readerState.layoutState.mode === 'double'){
+                const count = (readerState.layoutState.isReverseView) ? -2 : 2;
+                const nextPage = readerState.selectedBook ? Math.min(book.pages - 1, readerState.currentPage + count) : readerState.currentPage;
+                readerStore.setCurrentPage(nextPage);
+            }
+            else if (readerState.layoutState.mode === 'scroll') { // scroll down to: 0.88 * viewPortScroll.
+                window.scrollTo({ top: Math.min(window.scrollY + 0.88 * window.innerHeight, (readerState.selectedBook?.content as ImgSetContent).totalHeight - window.innerHeight), behavior: 'smooth' });
+            }    
         }
-        else if (readerState.layoutState.mode === 'double'){
-            const count = (readerState.layoutState.isReverseView) ? -2 : 2;
-            const nextPage = readerState.selectedBook ? Math.min(readerState.selectedBook.pages - 1, readerState.currentPage + count) : readerState.currentPage;
-            readerStore.setCurrentPage(nextPage);
+        else if (book.format === 'epub') {
+            epubViewer?.next();
+            readerState = { ...readerState, currentPage: -1, selectedPages: -1, currentDetail: book.currentDetail };
+            viewerListeners.forEach(l => l());
         }
-        else if (readerState.layoutState.mode === 'scroll') { // scroll down to: 0.88 * viewPortScroll.
-            window.scrollTo({ top: Math.min(window.scrollY + 0.88 * window.innerHeight, (readerState.selectedBook?.content as ImgSetContent).totalHeight - window.innerHeight), behavior: 'smooth' });
-        }        
+        else if (book.format === 'pdf') {
+            // pdfViewer?.next();
+        }
     },
 
-    // TODO: 이거 이미지 전용인데 왜 혼용해서 사용함? 어떻게든 고쳐야됨.
+    getCurrentPage(): number {
+        return readerState.currentPage;
+    },
+
+    // -------------------------------
+    // book.format specific methods
+    // -------------------------------
+    // for `ImgBook` format.
     setCurrentPage(pageIdx: number, options?: { scrollTo?: boolean }): void { // 1 ms // scrollTo: 수동으로 scroll을 옮겨줘야 하는 이벤트. 사용자가 스크롤을 움직일 떄는 필요없기 떄문.
         // if (pageIdx === readerState.currentPage) return; // 이미 같은 페이지면 무시 // 사용할 수 없는 이유 : 모드가 바뀌거나, 책이 바뀌거나.
         const scrollTo = options?.scrollTo ?? false;
 
-        const book = readerState.selectedBook;
+        const book = readerState.selectedBook as ImgBook | null;
         if (!book || pageIdx < 0 || pageIdx >= book.pages) return;
 
-        readerState = {...readerState, currentPage: pageIdx, selectedPages: getSelectedPages(pageIdx)};
+        readerState = {...readerState, currentPage: pageIdx, selectedPages: getSelectedPages(pageIdx), currentDetail: null};
         book.currentPageIdx = pageIdx; // 책 객체에도 현재 페이지를 기록
 
         imgCache?.setPage(pageIdx);
@@ -354,9 +402,42 @@ export const readerStore = {
         
         logger.debug(`setCurrentPage: ${pageIdx} (selectedPages: ${JSON.stringify(readerState.selectedPages)})`);
     },
-    getCurrentPage(): number {
-        return readerState.currentPage;
+
+    // for `EpubBook` format.
+    setEpubViewer(viewer: DocumentViewer) {
+        epubViewer = viewer;
     },
+    openEpub() {
+        if (!epubViewer) return;
+        epubViewer.open((readerState.selectedBook as EpubBook));
+    },
+    gotoHref(href: string) {
+        // const epubBook = (readerState.selectedBook?.content as EpubContent)?.getEpubBook();
+        epubViewer?.gotoHref(href);
+        readerState = { ...readerState, currentPage: -1, selectedPages: -1, currentDetail: (readerState.selectedBook as EpubBook).currentDetail };
+        viewerListeners.forEach(l => l());
+    },
+    changeEpubStyle({backgroundColor = '', color = '', fontSize = ''}) {
+        if (backgroundColor === '') backgroundColor = readerState.epubStyle.backgroundColor;
+        if (color === '') color = readerState.epubStyle.color;
+        if (fontSize === '') fontSize = readerState.epubStyle.fontSize;
+        
+        epubViewer?.changeStyle(backgroundColor, color, fontSize);
+        readerState = {...readerState, epubStyle: { backgroundColor, color, fontSize } };
+        viewerListeners.forEach(l => l());
+    },
+
+    // for `PdfBook` format.
+    setPdfViewer(viewer: DocumentViewer | null) {
+        pdfViewer = viewer;
+    },
+    // openPdf(file: File) {
+    //     if (!pdfViewer) return;
+    //     pdfViewer.open(file);
+    // },
+
+
+
 
     // ------------------------------
     // unObserved helper methods
@@ -402,7 +483,7 @@ function getSelectedPages(currentPage: number): number | [number, number] {
     // [start page, end page] for scroll mode
     else { 
         const startPage = Math.max(0, currentPage - SCROLL_BEHIND_CACHE_SIZE);
-        const endPage = Math.min(readerState.selectedBook!.pages - 1, currentPage + SCROLL_AHEAD_CACHE_SIZE);
+        const endPage = Math.min((readerState.selectedBook as ImgBook | null)!?.pages - 1 || 0, currentPage + SCROLL_AHEAD_CACHE_SIZE);
         return [startPage, endPage];
     }
 }
@@ -422,7 +503,6 @@ export const bookshelfStore = {
     },
 
     refreshBookshelf(books: Book[]) {
-        console.log("bookshelfStore.refreshBookshelf() called with books:", books);
         bookshelfState = { books };
         bookshelfListeners.forEach(listener => listener());
     }  

@@ -7,10 +7,13 @@ import { readerStore, ReaderState,
 function useReaderState(){
     return useSyncExternalStore(readerStore.subscribe, readerStore.getState);
 }
-import { createDocumentViewer } from "./documentWrap.ts";
+import { EpubColorPalette, DocumentViewer } from "./documentWrap.ts";
 
-import { ImgSetContent, EpubContent, PdfContent,
-         Book, FileType } from "./fileManager.tsx";
+import { ImgBook, 
+         ImgSetContent, EpubContent, PdfContent,
+         Book, FileType, 
+         PdfBook,
+         EpubBook} from "./fileManager.tsx";
 
 
 export type LayoutMode = 'single' | 'double' | 'scroll';
@@ -18,16 +21,17 @@ export type LayoutMode = 'single' | 'double' | 'scroll';
 
 function BookViewer() {
     const readerState = useSyncExternalStore(readerStore.subscribe, readerStore.getState);
-    if (readerState.selectedBook === null) return <div className="viewer-content"/>;    
-
-    const format = readerState.selectedBook.format;
+    const format = readerState.selectedBook?.format;
 
     return (
         <div className="viewer-content">
             {/* Strategy + layout 조합별로 다른 JSX가 들어옴 */}
             {format === 'img' && <ImgViewer readerState={readerState} />}
-            {format === 'epub' && <EpubViewer readerState={readerState} />}
-            {format === 'pdf' && <PdfViewer readerState={readerState} />}
+            {/* selectedBook == null일 경우에도 Container는 준비해 둬야 함. */}
+            {/* epub */}
+            { format !== 'img' && <EpubViewer readerState={readerState} />}
+            {/* pdf */}
+            { format !== 'img' && <PdfViewer readerState={readerState} />}
         </div>
     )
 }
@@ -107,7 +111,7 @@ function ImgViewer({ readerState }: { readerState: ReaderState }) {
             {layoutMode === 'double' && <>
                 <img className="Img-sheet" id="img-sheet_left"  src={getURL((selectedPages as [number, number])[0])} onClick={() => readerStore.prevPage()} alt="" />
                 <img className="Img-sheet" id="img-sheet_right" src={getURL((selectedPages as [number, number])[1])} onClick={() => readerStore.nextPage()} alt="" /> </>}
-            {layoutMode === 'scroll' && <div className={`Img-scroll-wrap ${readerState.layoutState.scrollBackgroundColor === 'black' ? 'black' : ''}`} style={{height: `${(selectedBook.content as ImgSetContent).totalHeight}px`}}>
+            {layoutMode === 'scroll' && <div className={`Img-scroll-wrap ${readerState.layoutState.imgScrollBackgroundColor === 'black' ? 'black' : ''}`} style={{height: `${(selectedBook.content as ImgSetContent).totalHeight}px`}}>
                 {range(selectedPages as [number, number]).map((pageIdx) => <img key={pageIdx} className="Img-sheet-scroll" id={`img-sheet_${pageIdx}`} src={getURL(pageIdx)} style={{top: (selectedBook.content as ImgSetContent).accumulatedHeight?.[pageIdx] || 0}} alt="" />)}
             </div>}
         </>;
@@ -136,18 +140,17 @@ const findPageAtY = (accumulatedHeight: number[], y: number) => {
 
 function EpubViewer({ readerState }: { readerState: ReaderState }) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const selectedBook: Book | null = readerState.selectedBook ; 
-    if (selectedBook === null) return null; // 이미 format체크는 했지만, compiler가 content 타입까지는 체크하지 못하므로, 여기서 한 번 더 체크해줍니다.
+    // const selectedBook: Book | null = readerState.selectedBook ; 
 
     useEffect(() => {
-        if(!containerRef.current) return;
+        readerStore.setEpubViewer(new DocumentViewer(containerRef.current!));
+    }, []);
 
-        const epubViewer = createDocumentViewer(containerRef.current);
-        const file: File = (readerState.selectedBook?.content as EpubContent).getFile();
-
-        if (file) epubViewer.open(file);
-
-        return () => { epubViewer.destroy(); };
+    // `container load → select Book → open Book` 의 순서를 지키기 위해 useEffect를 하나 더 쓸 수 밖에 없었음.
+    useEffect(() => {
+        const selectedBook: Book | null = readerState.selectedBook;
+        if (!selectedBook || selectedBook.format !== 'epub') return;
+        readerStore.openEpub();
     }, [readerState.selectedBook]);
 
     return <div ref={containerRef} className="Epub-viewer">
@@ -160,19 +163,18 @@ function PdfViewer({ readerState }: { readerState: ReaderState }) {
 // ------------------------------
 // Checkbox
 // ------------------------------
+
 function Checkbox(){
     const readerState = useSyncExternalStore(readerStore.subscribe, readerStore.getState);
+    const format = readerState.selectedBook?.format;
     const layoutMode = readerState.layoutState.mode;
 
-    const checkboxCfig = {
-        'add-fitting-page':{
-            
-        }
-    }
+    const epubStyle = readerState.epubStyle; // TODO: 이거 제대로 안 바뀌는 버그.
 
     // HTML에 .
     return <>
-            {layoutMode == 'single' && <div className="checkbox-wrap" id="checkbox-single">
+            {/* for IMG */}
+            {format === FileType.IMG && layoutMode == 'single' && <div className="checkbox-wrap" id="checkbox-single">
                 <div className="Checkbox-Item">
                     <span className="ButtonBox-Chcb-Title Hidden-Letters">rotate(R)</span>
                     {/* <input type="checkbox" className="ButtonBox-Chcb" id="rotate"/>  */}
@@ -183,7 +185,7 @@ function Checkbox(){
                 </div>
 
             </div>}
-            {layoutMode == 'double' && <><div className="checkbox-wrap" id="checkbox-double">
+            {format === FileType.IMG && layoutMode == 'double' && <><div className="checkbox-wrap" id="checkbox-double">
 				<div className="Checkbox-Item">
 					<span className="ButtonBox-Chcb-Title Hidden-Letters">add-fitting-page(A)</span>
 					<input type="checkbox" className="ButtonBox-Chcb" id="add-fitting-page" checked={readerState.layoutState.hasAddFittingPage} onChange={() => readerStore.toggleAddFittingPage()}/>
@@ -193,13 +195,47 @@ function Checkbox(){
 					<input type="checkbox" className="ButtonBox-Chcb" id="reverse-view" checked={readerState.layoutState.isReverseView} onChange={() => readerStore.toggleReverseView()}/>
 				</div>
 			</div></>}
-            {layoutMode == 'scroll' && <div className="checkbox-wrap" id="checkbox-scroll">
+            {format === FileType.IMG && layoutMode == 'scroll' && <div className="checkbox-wrap" id="checkbox-scroll">
                 <div className="Checkbox-Item">
-                    <span className="ButtonBox-Chcb-Title Hidden-Letters">white-background(B)</span>
-                    <input type="checkbox" className="ButtonBox-Chcb" id="white-background" checked={readerState.layoutState.scrollBackgroundColor === 'white'} onChange={() => readerStore.toggleScrollBackgroundColor()}/>
+                    <span className="ButtonBox-Chcb-Title Hidden-Letters">background(B)</span>
+                    <div className="ButtonBox-SquareWrap">
+                        <div className={`ButtonBox-Square ${readerState.layoutState.imgScrollBackgroundColor === 'white' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="white-background" style={{background: 'white'}} onClick={() => readerStore.setScrollBackgroundColor('white')}/>
+                        <div className={`ButtonBox-Square ${readerState.layoutState.imgScrollBackgroundColor === 'black' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="black-background" style={{background: 'black'}} onClick={() => readerStore.setScrollBackgroundColor('black')}/>
+                    </div>
                 </div>
 			</div>}
+            {/* for EPUB */}
+            {format === FileType.EPUB && <div className="checkbox-wrap" id="checkbox-epub">
+                <div className="Checkbox-Item Hidden-Letters">
+                    <span className="ButtonBox-Chcb-Title Hidden-Letters">background</span>
+                    <div className="ButtonBox-SquareWrap">
+                        <div className={`ButtonBox-Square ${epubStyle.backgroundColor === 'white' ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} id="white-background" style={{background: 'white'}} onClick={() => readerStore.changeEpubStyle({ backgroundColor: 'white' })}/>
+                        <div className={`ButtonBox-Square ${epubStyle.backgroundColor === 'black' ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} id="black-background" style={{background: 'black'}} onClick={() => readerStore.changeEpubStyle({ backgroundColor: 'black' })}/>
+                        <div className={`ButtonBox-Square ${epubStyle.backgroundColor === EpubColorPalette.moonglow ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} id="moonglow-background" style={{background: EpubColorPalette.moonglow}} onClick={() => readerStore.changeEpubStyle({ backgroundColor: EpubColorPalette.moonglow })}/>
+                        <div className={`ButtonBox-Square ${epubStyle.backgroundColor === EpubColorPalette.lavender ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} id="lavender-background" style={{background: EpubColorPalette.lavender}} onClick={() => readerStore.changeEpubStyle({ backgroundColor: EpubColorPalette.lavender })}/>
+                        <div className={`ButtonBox-Square ${epubStyle.backgroundColor === EpubColorPalette.gossip ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} id="gossip-background" style={{background: EpubColorPalette.gossip}} onClick={() => readerStore.changeEpubStyle({ backgroundColor: EpubColorPalette.gossip })}/>
+                    </div>
+                </div>
+                <div className="Checkbox-Item">
+                    <span className="ButtonBox-Chcb-Title Hidden-Letters">font-color</span>
+                    <div className="ButtonBox-SquareWrap">
+                        <div className={`ButtonBox-Square ${epubStyle.color === 'white' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="white-font" style={{background: epubStyle.backgroundColor, color: 'white'}} onClick={() => readerStore.changeEpubStyle({ color: 'white' })}>A</div>
+                        <div className={`ButtonBox-Square ${epubStyle.color === 'black' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="black-font" style={{background: epubStyle.backgroundColor, color: 'black'}} onClick={() => readerStore.changeEpubStyle({ color: 'black' })}>A</div>
+                    </div>
+                </div>
+                {/* <div className="Checkbox-Item">
+                    <span className="ButtonBox-Chcb-Title Hidden-Letters">font-size</span>
+                    <div className="ButtonBox-SquareWrap">
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '12px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-12" style={{fontSize: '0.5em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '12px' })}>A</div>
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '16px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-16" style={{fontSize: '0.65em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '16px' })}>A</div>
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '20px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-20" style={{fontSize: '0.8em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '20px' })}>A</div>
+                    </div>
+                </div> */}
+
+            </div>}
         </>;
+        // fontsize, fontcolor(2), backgroundcolor(5),
+        //  progressbar, scrollmode
 }    
 
 
@@ -215,6 +251,19 @@ function Bookshelf() {
     const { books } = useSyncExternalStore(bookshelfStore.subscribe, bookshelfStore.getState);
     const readerState = useSyncExternalStore(readerStore.subscribe, readerStore.getState); // TODO: 이게 필요한가? 매번 로드되는데?
     // console.log(`Rendering zip book`);
+
+    const getBookPages = (book: Book): number => {
+        switch(book.format){
+            case FileType.IMG:
+                return (book as ImgBook).pages;
+            case FileType.EPUB:
+                return (book.content as EpubContent).getEpubToc().length;
+            case FileType.PDF:
+                return -1;
+            default:
+                return -1;
+        }
+    };
 
     // 미구현 : book.size
     return (
@@ -237,7 +286,7 @@ function Bookshelf() {
                 <div className={`book book-${book.format}${(readerState.selectedBook === book) ? ' book-selected' : ''}`} onClick={() => readerStore.selectBook(book)}>
                     <span className="FileListType">{book.format}</span><span className="FileListDivider">|</span><span className="FileListTitle">{book.title}</span>
                     <div className="FileListPageWrap Hidden-Letters">
-                        <span className="FileListDivider">|</span><span className="FileListType">{book.pages}</span>
+                        <span className="FileListDivider">|</span><span className="FileListType">{getBookPages(book)}</span>
                     </div>
                 </div>
             </div>
@@ -250,43 +299,62 @@ function PageBox() {
     const readerState = useSyncExternalStore(readerStore.subscribe, readerStore.getState);
     const selectedBook: Book | null = readerState.selectedBook;
 
-    // scrollIntoView // React Hook은 조건문 안에서 호출하면 안 되므로, 조건문보다 먼저 수행.
+    // scrollIntoView selected pages
+    // // React Hook은 조건문 안에서 호출하면 안 되므로, 조건문보다 먼저 수행.
     const containerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const container = containerRef.current;
         if (container === null) return;
 
-        const page = container.querySelector<HTMLElement>(`[data-page-index="${readerState.currentPage}"]`);
+        const page = container.querySelector<HTMLElement>(`[page-index="${readerState.currentPage}"]`);
         if (page === null) return;
 
         page.scrollIntoView({ behavior: 'smooth', block: 'center'});
     }, [readerState.currentPage, selectedBook]);
 
     if (selectedBook === null) return <div className="page-box-content"/>;
-    // console.log(`Rendering page box for book: ${selectedBook.title}, ${selectedBook.format}, ${selectedBook.pages}, ${selectedBook.bookSource}, ${selectedBook.content}`)! ? '' : '';
+
 
     const selectedPages: number | [number, number] = readerState.selectedPages;
-    const pageSelectedClass = (pageIdx: number) => {
-            if (typeof selectedPages === 'number') { // single mode
-                return pageIdx === selectedPages ? 'page-selected' : '';
-            } else if (readerState.layoutState.mode === 'double') { // double mode
-                return (pageIdx === selectedPages[0] || pageIdx === selectedPages[1]) ? 'page-selected' : '';
-            }
-            else if (readerState.layoutState.mode === 'scroll') { // scroll mode
-                return (selectedPages[0] <= pageIdx && pageIdx <= selectedPages[1]) ? 'page-selected' : '';
+    const checkPageSelected = (pageIdx: number) => {
+            switch(selectedBook.format){
+                case FileType.IMG:
+                    console.log('check page selection:', pageIdx, selectedPages, readerState.layoutState.mode);
+                    if (typeof selectedPages === 'number') { // single mode
+                        return pageIdx === selectedPages ? 'page-selected' : '';
+                    } else if (readerState.layoutState.mode === 'double') { // double mode
+                        return (pageIdx === selectedPages[0] || pageIdx === selectedPages[1]) ? 'page-selected' : '';
+                    }
+                    else if (readerState.layoutState.mode === 'scroll') { // scroll mode
+                        return (selectedPages[0] <= pageIdx && pageIdx <= selectedPages[1]) ? 'page-selected' : '';
+                    }
+                    break;
+                case FileType.EPUB:
+                    return (pageIdx === readerState.currentDetail?.section.current) ? 'page-selected' : ''; // TODO: 비상. epub의 toc와 section은 다른 거임. section이 더 넓은 범위.
+                case FileType.PDF:
+                    return (pageIdx === readerState.currentPage) ? 'page-selected' : '';
+                default:
+                    return '';
             }
         }
 
-    const imgSetContent = selectedBook.content as ImgSetContent; // TODO : 이거 안전한 코드 맞음?
     return <div ref={containerRef} className="page-box-content">
         {selectedBook.format === 'img' && 
-            selectedBook.content.getImgSet().map((imgInfo, i) => (
-                <div key={`${imgInfo.name}_${i}`} data-page-index={i} className={`page ${pageSelectedClass(i)}`} onClick={() => {readerStore.setCurrentPage(i, {scrollTo: true});}}>
+            (selectedBook.content as ImgSetContent).getImgSet().map((imgInfo, i) => (
+                <div key={`${imgInfo.name}_${i}`} page-index={i} className={`page ${checkPageSelected(i)}`} onClick={() => {readerStore.setCurrentPage(i, {scrollTo: true});}}>
                     <span className="page-name">{imgInfo.name}</span>
                     <span className="page-shape Hidden-Letters">{imgInfo.width}x{imgInfo.height}</span>
                 </div>
         ))}
-        {/* {selectedBook.format === 'epub' &&
+        {selectedBook.format === 'epub' &&
+            ((selectedBook.content as EpubContent).getEpubToc().map((tocItem, i) => (
+                <div key={`${tocItem.label}_${i}`} page-index={i} className={`page ${checkPageSelected(i)}`} onClick={() => {readerStore.gotoHref(tocItem.href);}}>
+                    <span className="page-name">{tocItem.label}</span>
+                    {/* <span className="page-shape Hidden-Letters">{tocItem.href}</span> */}
+                </div>
+        )))}
+        {/* {selectedBook.format === 'pdf' &&
+
         } */}
     </div>;
 }

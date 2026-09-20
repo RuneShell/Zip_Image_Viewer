@@ -44,7 +44,7 @@ class SetDisplayModeCommand implements Command<DisplayMode> {
                 readerStore.setLayoutMode({ mode: 'double', isReverseView: false, hasAddFittingPage: false });
                 break;
             case 'scroll': // TODO : 이 레이아웃을 변수로 관리하기
-                readerStore.setLayoutMode({ mode: 'scroll', scrollBackgroundColor: 'white' });
+                readerStore.setLayoutMode({ mode: 'scroll', imgScrollBackgroundColor: 'white' });
                 break;
         }
 
@@ -63,10 +63,10 @@ class ToggleReverseViewCommand implements Command {
     }
 }
 
-class ToggleScrollBackgroundColorCommand implements Command {
+class SetScrollBackgroundColorCommand implements Command {
     constructor(){}
     execute(){
-        readerStore.toggleScrollBackgroundColor();
+        readerStore.setScrollBackgroundColor();
     }
 }
 
@@ -144,7 +144,7 @@ const commands: Record<string, AnyCommand> = {
     addFittingPage: new AddFittingPageCommand(),
     toggleReverseView: new ToggleReverseViewCommand(),
 
-    toggleScrollBackgroundColor: new ToggleScrollBackgroundColorCommand(),  
+    setScrollBackgroundColor: new SetScrollBackgroundColorCommand(),  
 
     setFullscreen: new SetFullscreenCommand(application),
 
@@ -222,7 +222,7 @@ const staticElementBindings: StaticBinding[] = [
     {element: document, event: "keydown", command: commands.addFittingPage,    code: "KeyA"},
     {element: document, event: "keydown", command: commands.toggleReverseView, code: "KeyR"},
 
-    {element: document, event: "keydown", command: commands.toggleScrollBackgroundColor, code: "KeyB"},
+    {element: document, event: "keydown", command: commands.setScrollBackgroundColor, code: "KeyB"},
 
 
     // 2. click events

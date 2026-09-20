@@ -14,6 +14,10 @@ import { renderReact } from "./viewer.tsx";
 import { leftSidebar } from "./HTMLVanilla.ts";
 import { fileParser } from "./fileParser.ts";
 
+import { makeBook } from './foliate-js/view.js';
+import { EPUB } from './foliate-js/epub.js';
+
+
 import { Logger } from "./myLogger.ts";
 const logger = new Logger("FileInputManager");
 
@@ -35,16 +39,22 @@ type BookSourceType = {type: typeof FileType.DIR, sourceName: string}
 
 interface BaseBook{
     title: string;
-    pages: number;
-    currentPageIdx: number;
     bookSource : BookSourceType | null | undefined; // 책이 어디서 왔는지. null이면 direct upload. undefined면 미정.
 }
 export interface ImgBook extends BaseBook{
     format: typeof FileType.IMG;
+    pages: number;
+    currentPageIdx: number;
     content: ImgSetContent;
+}
+export type epubCurrentDetail = {
+    cfi: string | null; // EPUB의 현재 위치를 나타내는 CFI. null이면 처음부터.
+    fraction: number; // progress fraction of the total book. 0-1.
+    section: {current: number, total: number};  // progress of the book 'spines'.
 }
 export interface EpubBook extends BaseBook{
     format: typeof FileType.EPUB;
+    currentDetail: epubCurrentDetail;
     content: EpubContent;
 }
 export interface PdfBook extends BaseBook{
@@ -76,8 +86,6 @@ export class ImgSetContent implements BookContent{
         //      not calculating: 1.23 s
         ({width, height} = await fileParser.getImgShape(file)); // 0-1 ms per file.
 
-        // this.totalHeight += height;
-
         let imgInfo: ImgInfo = {
             name: file.name,
             file: file,
@@ -89,7 +97,6 @@ export class ImgSetContent implements BookContent{
         
         this.updateAccumulatedHeight();
     }
-
     private updateAccumulatedHeight(){
         this.accumulatedHeight = new Array(this.imgSet.length + 1); // last index means bottom.
         let sum = 0;
@@ -102,25 +109,11 @@ export class ImgSetContent implements BookContent{
         this.accumulatedHeight[this.imgSet.length] = sum; // sentinel.
         this.totalHeight = sum;
     }
-
-    // public getImg(pageIdx: number): ImgInfo | null{
-    //     return this.imgSet[pageIdx] ? this.imgSet[pageIdx] : null;
-    // }
     
     public getImgSet(): ImgInfo[]{
         return this.imgSet;
     }
-    
-    // public getPageNames(): string[]{ 
-    //     return this.imgSet.map(imgInfo => imgInfo.name); // 예상 page count: 약 300~1000장. 굳이 cache 필요 없음.
-    // }
-    // public getPageShapes(): {width: number, height: number}[]{
-    //     return this.imgSet.map(imgInfo => ({width: imgInfo.width, height: imgInfo.height}));
-    // }
 
-    public getImgCount(): number{ // 필요한가?
-        return this.imgSet.length;
-    }
     public getImgSetName(): string{
         if (this.imgSet.length === 0) return "";
         const firstImgName = this.imgSet[0].name;
@@ -130,14 +123,47 @@ export class ImgSetContent implements BookContent{
         return imgSetName;
     }
 }
+type EpubTocItem = {
+    label: string; // a string label for the item
+    href: string; // a string representing the destination of the item. Does not have to be a valid URL.
+    subitems: EpubTocItem[] | null; // a array that contains TOC items. // null
+}
 export class EpubContent implements BookContent{
-    private file: File;
-    public constructor(epubFile: File){
-        this.file = epubFile;
+    private rawFile: File;
+    private epubBook: EPUB | null = null;
+    private toc: EpubTocItem[] = [];
+    private sectionCount: number;
+    // private toc
+
+    // async static factory method
+    public static async create(file: File): Promise<EpubContent>{
+        const epubBook = await makeBook(file);
+        if (!(epubBook instanceof EPUB)) throw new Error("Failed to create EPUB book.");
+        return new EpubContent(file, epubBook);
+    }
+    private constructor(file: File, epubBook: EPUB){
+        this.rawFile = file;
+        this.epubBook = epubBook;
+        this.toc = epubBook.toc;
+        this.sectionCount = this.toc.length;
+        console.log(`?${epubBook.resolveHref(this.toc[1].href)}`);
     }
 
+    public getEpubBook(): EPUB | null{
+        return this.epubBook;
+    }
     public getFile(): File{
-        return this.file;
+        return this.rawFile;
+    }
+    public getEpubToc(): EpubTocItem[]{
+        return this.toc;
+    }
+    public getFirstTocItemHref(): string | null{
+        if (this.toc.length === 0) return null;
+        return this.toc[0].href;
+    }
+    public getSectionCount(): number{
+        return this.sectionCount;
     }
 }
 export class PdfContent implements BookContent{
@@ -175,6 +201,7 @@ class FileInputManager{
     // ---------------------------------
     public async acceptFiles(inputFiles: File[]): Promise<void>{
         logger.startTimer();
+        // rightSidebar.freeze(); // TODO : freeze UI
         inputFiles.sort(SortAlphaNum);
         
         leftSidebar.statusReport.setStatusWorking("Processing files...");
@@ -204,11 +231,11 @@ class FileInputManager{
 
         // 지금까지 imgSetContent에 누적한 img들을 book으로 확정하고, 새 imgSetContent를 시작하는 함수.
         const flushImgSetContent = function*(): Generator<Book>{
-            const imgCount = imgSetContent.getImgCount();
+            const imgCount = imgSetContent.getImgSet().length;
             if (imgCount == 0) return; // 아무것도 없으면 flush하지 않음.
 
             yield {
-                format: FileType.IMG,
+                format: FileType.IMG, 
                 title: currentDirPath ?? imgSetContent.getImgSetName(), // imgSet_title = directory path | first image name.
                 pages: imgCount,
                 content: imgSetContent,
@@ -246,13 +273,16 @@ class FileInputManager{
                     break;
                 }
                 case FileType.EPUB: {
-                    const epubContent = new EpubContent(file);
+                    const epubContent = await EpubContent.create(file);
                     yield {
                         format: FileType.EPUB,
                         title: file.name,
-                        pages: 0, // EPUB의 경우 페이지 수를 미리 알 수 없음?
                         content: epubContent,
-                        currentPageIdx: 0,
+                        currentDetail: {
+                            cfi: null,
+                            fraction: 0,
+                            section: {current: 0, total: 0},
+                        },
                         bookSource: source
                     };
                     break;
@@ -262,9 +292,8 @@ class FileInputManager{
                     yield {
                         format: FileType.PDF,
                         title: file.name,
-                        pages: 0, // PDF의 경우 페이지 수를 미리 알 수 없음?
+                        // pages: 0, // PDF의 경우 페이지 수를 미리 알 수 없음?
                         content: pdfContent,
-                        currentPageIdx: 0,
                         bookSource: source
                     };  
                     break;
