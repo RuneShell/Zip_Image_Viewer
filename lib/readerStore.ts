@@ -250,7 +250,6 @@ export const readerStore = {
 //     return unsubscribe;
 // }, []); 처럼 해서 구독 해제
 
-
     setLayoutMode(layoutState: ReaderState['layoutState']) {
         readerState = {...readerState, layoutState};
         if (layoutState.mode === 'double' && readerState.selectedBook) {
@@ -261,29 +260,6 @@ export const readerStore = {
             readerStore.setCurrentPage(readerState.currentPage, {scrollTo: true});
         }
 
-    },
-
-    // double layout options
-    toggleAddFittingPage() {
-        if (readerState.layoutState.mode === 'double') {
-            readerState = { ...readerState, layoutState: { ...readerState.layoutState, hasAddFittingPage: !readerState.layoutState.hasAddFittingPage } };
-        }
-        readerStore.setCurrentPage(readerState.currentPage);
-    },
-    toggleReverseView() {
-        if (readerState.layoutState.mode === 'double') {
-            readerState = { ...readerState, layoutState: { ...readerState.layoutState, isReverseView: !readerState.layoutState.isReverseView } };
-        }
-        readerStore.setCurrentPage(readerState.currentPage);
-    },
-
-    // scroll layout options
-    setScrollBackgroundColor(newColor: string = '') {
-        if (readerState.layoutState.mode === 'scroll') {
-            if (newColor === '') newColor = (readerState.layoutState.imgScrollBackgroundColor === 'white') ? 'black' : 'white'; // toggle if no color selected.
-            readerState = { ...readerState, layoutState: { ...readerState.layoutState, imgScrollBackgroundColor: newColor } };
-            readerStore.setCurrentPage(readerState.currentPage);
-        }
     },
 
 
@@ -379,6 +355,21 @@ export const readerStore = {
     // book.format specific methods
     // -------------------------------
     // for `ImgBook` format.
+
+    // double layout options
+    toggleAddFittingPage() {
+        if (readerState.layoutState.mode === 'double') {
+            readerState = { ...readerState, layoutState: { ...readerState.layoutState, hasAddFittingPage: !readerState.layoutState.hasAddFittingPage } };
+        }
+        readerStore.setCurrentPage(readerState.currentPage);
+    },
+    toggleReverseView() {
+        if (readerState.layoutState.mode === 'double') {
+            readerState = { ...readerState, layoutState: { ...readerState.layoutState, isReverseView: !readerState.layoutState.isReverseView } };
+        }
+        readerStore.setCurrentPage(readerState.currentPage);
+    },
+
     setCurrentPage(pageIdx: number, options?: { scrollTo?: boolean }): void { // 1 ms // scrollTo: 수동으로 scroll을 옮겨줘야 하는 이벤트. 사용자가 스크롤을 움직일 떄는 필요없기 떄문.
         // if (pageIdx === readerState.currentPage) return; // 이미 같은 페이지면 무시 // 사용할 수 없는 이유 : 모드가 바뀌거나, 책이 바뀌거나.
         const scrollTo = options?.scrollTo ?? false;
@@ -402,6 +393,16 @@ export const readerStore = {
         
         logger.debug(`setCurrentPage: ${pageIdx} (selectedPages: ${JSON.stringify(readerState.selectedPages)})`);
     },
+
+    // scroll layout options
+    setScrollBackgroundColor(newColor: string = '') {
+        if (readerState.layoutState.mode === 'scroll') {
+            if (newColor === '') newColor = (readerState.layoutState.imgScrollBackgroundColor === 'white') ? 'black' : 'white'; // toggle if no color selected.
+            readerState = { ...readerState, layoutState: { ...readerState.layoutState, imgScrollBackgroundColor: newColor } };
+            readerStore.setCurrentPage(readerState.currentPage);
+        }
+    },
+
 
     // for `EpubBook` format.
     setEpubViewer(viewer: DocumentViewer) {

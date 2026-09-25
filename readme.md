@@ -1,6 +1,6 @@
 # Personal Project 2: ZIV (Zip Image Viewer)
 
-### A lightweight, portable local book reader that runs in a web browser for ZIP, IMG, (and EPUB, PDF) files.
+### A lightweight, portable local book reader that runs in a web browser for ZIP, IMG, EPUB, (and PDF) files.
 If your book is zipped, it will recursively unzip and extract the inner files.
 
 
@@ -8,8 +8,9 @@ If your book is zipped, it will recursively unzip and extract the inner files.
 
 
 ### How to use:
-- HTML Preview
+- HTML Preview: [ZIV.html](https://raw.githack.com/RuneShell/Zip_Image_Viewer/main/ZIV.html)
 
+- Local HTML file
 1.  Open **ZIV.html** in your local browser.
 2.  Hover your mouse cursor over the right side of the page and Upload your files.
 3.  Hover your mouse cursor over the left side of the page and Select your book.
@@ -18,7 +19,7 @@ If your book is zipped, it will recursively unzip and extract the inner files.
 **File Types**
 - **zip**ped items  : .zip
 - **image** : .jpg, .jpeg, .png, .gif
-- **epub** : .epub *(not implemented yet)*
+- **epub** : .epub *(may not work with `file://`. use `localhost` or `http / https://` instead.)*
 - **pdf** : .pdf *(not implemented yet)*
 
 **View Mode**
@@ -35,6 +36,7 @@ If your book is zipped, it will recursively unzip and extract the inner files.
 
 **Recommended Environment**
 Chrome / Firefox
+
 Desktop Moniter with FHD(1080x1920 px) / QHD(1440x2560) resolution
 
 
@@ -47,13 +49,22 @@ Desktop Moniter with FHD(1080x1920 px) / QHD(1440x2560) resolution
 
 **Libraries Used**
 - [zip.js (BSD-3-Clause License)](https://github.com/gildas-lormeau/zip.js) - Copyright (c) 2023, Gildas Lormeau
+- [react (MIT License)](https://github.com/react/react/tree/main) - Copyright (c) Meta Platforms, Inc. and affiliates.
+- [foliate-js (MIT License)](https://github.com/johnfactotum/foliate-js?tab=MIT-1-ov-file) - Copyright (c) 2022 John Factotum
 
 **Runeshell**
-v 1.3.**-1** - not completed
+v 1.3.0
+
 Thank you for your interest!
 
 **History**
 v 1.0 : prototype
+
 v 1.1 : fully rebuild GUI
+
 v 1.2 : added features, clean some core codes 
+
 v 1.3 : refactorizing full repo with clean code, feature, and clean structure.
+
+**Architecture**
+![Image](https://github.com/RuneShell/Zip_Image_Viewer/blob/main/architecture.webp)

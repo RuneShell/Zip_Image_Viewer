@@ -87,7 +87,7 @@ export class ImgSetContent implements BookContent{
         ({width, height} = await fileParser.getImgShape(file)); // 0-1 ms per file.
 
         let imgInfo: ImgInfo = {
-            name: file.name,
+            name: file.name.split('/').pop()!, // get only filename, not path.
             file: file,
             width: width,
             height: height
@@ -138,6 +138,7 @@ export class EpubContent implements BookContent{
     // async static factory method
     public static async create(file: File): Promise<EpubContent>{
         const epubBook = await makeBook(file);
+        if (!epubBook) throw new Error(`Failed to create EPUB book from file: ${file.name}`);
         if (!(epubBook instanceof EPUB)) throw new Error("Failed to create EPUB book.");
         return new EpubContent(file, epubBook);
     }
@@ -208,10 +209,10 @@ class FileInputManager{
         for await (const book of this.flattenZipEntriesGen(inputFiles)){
             logger.debug(`FileInputManager.acceptFiles() processing book: ${book.title}, type: ${book.format}`);
             this.books.push(book);
-
-            // Display to shelf
-            bookshelfStore.refreshBookshelf(this.books);
         }
+        // Display to shelf
+        bookshelfStore.refreshBookshelf(this.books);
+
         logger.endTimer(`${this.books.length} books loaded.`, "INFO");
         leftSidebar.statusReport.setStatusNormal(`${this.books.length} books loaded.`);
     }
@@ -247,26 +248,31 @@ class FileInputManager{
         }
         leftSidebar.statusReport.setStatusWorking("Processing files...");
 
+        // pop stack and yield books. (DFS)
         while (stack.length > 0){
             const {file, source} = stack.pop()!;
             const fileType = CheckFileType(file.name);
 
             switch (fileType){
                 case FileType.ZIP: {
+                    // when meet new zip, for example: `zip1 = {dir1} ↓ zip2 = {dir2}`.
+                    currentDirPath = undefined; // 경계를 강제 초기화, 두 zip 안에 파일들이 모두 root(우연히 path이름이 동일함)에 있을 때 하나로 합쳐지는 것을 방지.
+                    // currentSource = source; // change currentSource = dir2.
+
                     leftSidebar.statusReport.setStatusWorking("Decompressing zip..."); 
                     const unzipped = await zipManager.UnzipFile(file); // 1000 ms
                     unzipped.sort(SortAlphaNum); // 1 ms
 
-                    // unzipped_items.source = {type: "ZIP", sourceName: zip name}
                     stack.push(...unzipped.reverse().map(f => ({file: f, source: {type: FileType.ZIP, sourceName: file.name}}))); // 0 ms
                     break;
                 }
                 case FileType.IMG: {
                     const fileDirPath = dirNameOf(file.name);
+                    // when meet new directory in zip, for example: `zip1 = {dir1, ↓ dir2}`
                     if (currentDirPath !== fileDirPath) { // 연속된 이미지 파일 두 개의 디렉토리 경로를 비교해서 경계를 자름.
                         yield* flushImgSetContent(); // 현재까지 누적한 imgSetContent를 flush하고, 새 imgSetContent를 시작.
                         currentDirPath = fileDirPath;
-                        currentSource = source; // group 경계에서 source 갱신.
+                        currentSource = source; // change currentSource = dir2, when zip = {dir1, dir2}.
                     }
 
                     await imgSetContent.appendImg(file);
@@ -299,6 +305,9 @@ class FileInputManager{
                     break;
                 }
                 case FileType.DIR: {
+                    // currentDirPath = dirNameOf(file.name); // ?
+                    currentSource = source; // set ImgSetContent.name as 'dir name' if directory exists.
+
                     // 빈 폴더 마커는 그룹 경계 판단에 쓰지 않음 (이미지 경로로만 판단하므로 무시해도 안전)
                     break;
                 }
@@ -385,6 +394,10 @@ class ZipManager {
         let entries2files: File[] = [];
 
         try{
+            logger.debug(`start tryDecryptEntries()`);
+
+            // 방법 1. 직렬화 및 per-entry worker.
+            // 424, 120, 139, 124, 120 ms
             for (const entry of entries){
                 if(entry.directory) continue; // 디렉토리 마커는 무시
 
@@ -393,6 +406,27 @@ class ZipManager {
 
                 entries2files.push(file);
             }
+
+            // 방법 2. entry-wise parallelization (worker)
+            // const BATCH_SIZE = 16; 
+            // // 8 : 131, 119, 106, 107, 106 ms
+            // // 16 : 305, 128, 99, 105, 97 ms
+
+                // for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+                //     const batch = entries.slice(i, i + BATCH_SIZE);
+
+                //     const blobs = await Promise.all(
+                //         batch.filter(entry => !entry.directory).map(entry => this.getData(entry))
+                //     );
+
+                //     // blobs 처리
+                //     blobs.forEach((blob, index) => {
+                //         const entry = batch.filter(entry => !entry.directory)[index];
+
+                //         entries2files.push(new File([blob], entry.filename));
+                //     });
+                // }
+            logger.debug(`end tryDecryptEntries()`);
             return entries2files;
         } catch (e) {
             return null;

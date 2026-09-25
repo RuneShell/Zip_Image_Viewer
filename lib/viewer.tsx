@@ -223,14 +223,14 @@ function Checkbox(){
                         <div className={`ButtonBox-Square ${epubStyle.color === 'black' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="black-font" style={{background: epubStyle.backgroundColor, color: 'black'}} onClick={() => readerStore.changeEpubStyle({ color: 'black' })}>A</div>
                     </div>
                 </div>
-                {/* <div className="Checkbox-Item">
+                <div className="Checkbox-Item">
                     <span className="ButtonBox-Chcb-Title Hidden-Letters">font-size</span>
                     <div className="ButtonBox-SquareWrap">
-                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '12px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-12" style={{fontSize: '0.5em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '12px' })}>A</div>
-                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '16px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-16" style={{fontSize: '0.65em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '16px' })}>A</div>
-                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '20px' ? 'ButtonBox-Square-selected' : 'Hidden-Letters'}`} id="font-size-20" style={{fontSize: '0.8em'}} onClick={() => readerStore.changeEpubStyle({ fontSize: '20px' })}>A</div>
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '0.8em' ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} onClick={() => readerStore.changeEpubStyle({ fontSize: '0.8em' })}><div className="ButtonBox-Square-Inner" style={{fontSize: '0.5em'}}>A</div></div>
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '1em' ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} onClick={() => readerStore.changeEpubStyle({ fontSize: '1em' })}><div className="ButtonBox-Square-Inner" style={{fontSize: '0.65em'}}>A</div></div>
+                        <div className={`ButtonBox-Square ${epubStyle.fontSize === '1.2em' ? 'ButtonBox-Square-selected' : ''} Hidden-Letters`} onClick={() => readerStore.changeEpubStyle({ fontSize: '1.2em' })}><div className="ButtonBox-Square-Inner" style={{fontSize: '0.8em'}}>A</div></div>
                     </div>
-                </div> */}
+                </div>
 
             </div>}
         </>;
@@ -330,7 +330,8 @@ function PageBox() {
                     }
                     break;
                 case FileType.EPUB:
-                    return (pageIdx === readerState.currentDetail?.section.current) ? 'page-selected' : ''; // TODO: 비상. epub의 toc와 section은 다른 거임. section이 더 넓은 범위.
+                    return;
+                    // return (pageIdx === readerState.currentDetail?.section.current) ? 'page-selected' : ''; // TODO: 비상. epub의 toc와 section은 다른 거임. section이 더 넓은 범위.
                 case FileType.PDF:
                     return (pageIdx === readerState.currentPage) ? 'page-selected' : '';
                 default:
